@@ -1494,7 +1494,7 @@ fn expectedHttpRequestSize(raw: []const u8) !?usize {
     return total;
 }
 
-fn readHttpRequest(allocator: std.mem.Allocator, stream: *std.net.Stream) ![]u8 {
+fn readHttpRequestFromReader(allocator: std.mem.Allocator, reader: anytype) ![]u8 {
     var request_buf: std.ArrayListUnmanaged(u8) = .empty;
     errdefer request_buf.deinit(allocator);
 
@@ -1502,7 +1502,7 @@ fn readHttpRequest(allocator: std.mem.Allocator, stream: *std.net.Stream) ![]u8 
     var chunk: [2048]u8 = undefined;
 
     while (true) {
-        const n = try stream.read(&chunk);
+        const n = try reader.read(&chunk);
         if (n == 0) return error.IncompleteRequest;
 
         try request_buf.appendSlice(allocator, chunk[0..n]);
@@ -1519,6 +1519,10 @@ fn readHttpRequest(allocator: std.mem.Allocator, stream: *std.net.Stream) ![]u8 
             }
         }
     }
+}
+
+fn readHttpRequest(allocator: std.mem.Allocator, stream: *std.net.Stream) ![]u8 {
+    return readHttpRequestFromReader(allocator, stream);
 }
 
 fn writeJsonResponse(stream: *std.net.Stream, status: []const u8, body: []const u8) void {
@@ -4028,6 +4032,70 @@ test "expectedHttpRequestSize rejects invalid content length" {
 test "expectedHttpRequestSize rejects oversized content length" {
     const raw = "POST /webhook HTTP/1.1\r\nHost: localhost\r\nContent-Length: 999999\r\n\r\n";
     try std.testing.expectError(error.RequestTooLarge, expectedHttpRequestSize(raw));
+}
+
+test "readHttpRequestFromReader assembles fragmented request" {
+    const ChunkedReader = struct {
+        chunks: []const []const u8,
+        chunk_idx: usize = 0,
+        offset_in_chunk: usize = 0,
+
+        fn read(self: *@This(), out: []u8) !usize {
+            while (self.chunk_idx < self.chunks.len and self.offset_in_chunk >= self.chunks[self.chunk_idx].len) {
+                self.chunk_idx += 1;
+                self.offset_in_chunk = 0;
+            }
+            if (self.chunk_idx >= self.chunks.len) return 0;
+
+            const chunk = self.chunks[self.chunk_idx];
+            const remaining = chunk[self.offset_in_chunk..];
+            const n = @min(out.len, remaining.len);
+            std.mem.copyForwards(u8, out[0..n], remaining[0..n]);
+            self.offset_in_chunk += n;
+            return n;
+        }
+    };
+
+    const expected = "POST /pair HTTP/1.1\r\nHost: localhost\r\nContent-Length: 11\r\n\r\nhello world";
+    const chunks = [_][]const u8{
+        "POST /pair HTTP/1.1\r\nHo",
+        "st: localhost\r\nContent-Length: 11\r\n\r\nhel",
+        "lo world",
+    };
+    var reader = ChunkedReader{ .chunks = chunks[0..] };
+
+    const raw = try readHttpRequestFromReader(std.testing.allocator, &reader);
+    defer std.testing.allocator.free(raw);
+    try std.testing.expectEqualStrings(expected, raw);
+}
+
+test "readHttpRequestFromReader returns IncompleteRequest for truncated body" {
+    const ChunkedReader = struct {
+        chunks: []const []const u8,
+        chunk_idx: usize = 0,
+        offset_in_chunk: usize = 0,
+
+        fn read(self: *@This(), out: []u8) !usize {
+            while (self.chunk_idx < self.chunks.len and self.offset_in_chunk >= self.chunks[self.chunk_idx].len) {
+                self.chunk_idx += 1;
+                self.offset_in_chunk = 0;
+            }
+            if (self.chunk_idx >= self.chunks.len) return 0;
+
+            const chunk = self.chunks[self.chunk_idx];
+            const remaining = chunk[self.offset_in_chunk..];
+            const n = @min(out.len, remaining.len);
+            std.mem.copyForwards(u8, out[0..n], remaining[0..n]);
+            self.offset_in_chunk += n;
+            return n;
+        }
+    };
+
+    const chunks = [_][]const u8{
+        "POST /pair HTTP/1.1\r\nHost: localhost\r\nContent-Length: 8\r\n\r\nabc",
+    };
+    var reader = ChunkedReader{ .chunks = chunks[0..] };
+    try std.testing.expectError(error.IncompleteRequest, readHttpRequestFromReader(std.testing.allocator, &reader));
 }
 
 test "userFacingAgentError maps ProviderDoesNotSupportVision" {
