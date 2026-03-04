@@ -276,7 +276,7 @@ pub fn buildIdentifyPayload(buf: []u8, access_token: []const u8, intents: u32) !
 
 /// Build a heartbeat payload.
 /// Format: {"op":1,"d":N} where N is the last sequence number (or null).
-pub fn buildHeartbeatPayload(buf: []u8, sequence: ?u32) ![]const u8 {
+pub fn buildHeartbeatPayload(buf: []u8, sequence: ?i64) ![]const u8 {
     var fbs = std.io.fixedBufferStream(buf);
     const w = fbs.writer();
     if (sequence) |seq| {
@@ -722,7 +722,7 @@ pub const QQChannel = struct {
     event_bus: ?*bus.Bus,
     dedup_set: StringDedupSet = .{},
     dedup_allocator: std.mem.Allocator,
-    sequence: Atomic(u32) = Atomic(u32).init(0),
+    sequence: Atomic(i64) = Atomic(i64).init(0),
     has_sequence: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
     heartbeat_interval_ms: std.atomic.Value(u32) = std.atomic.Value(u32).init(0),
     session_id: ?[]const u8,
@@ -819,12 +819,12 @@ pub const QQChannel = struct {
         // Update sequence number
         if (val.object.get("s")) |s_val| {
             if (s_val == .integer) {
-                if (s_val.integer >= 0 and s_val.integer <= std.math.maxInt(u32)) {
-                    self.sequence.store(@intCast(s_val.integer), .release);
+                if (s_val.integer >= 0) {
+                    self.sequence.store(s_val.integer, .release);
                     self.has_sequence.store(true, .release);
                 } else {
-                    // Invalid sequence range (negative or wider than u32):
-                    // clear sequence state so heartbeats send null instead of stale value.
+                    // Invalid sequence range: clear sequence state so heartbeats send
+                    // null instead of a stale positive value.
                     self.sequence.store(0, .release);
                     self.has_sequence.store(false, .release);
                 }
@@ -1585,7 +1585,7 @@ pub const QQChannel = struct {
     /// Heartbeat thread: sends periodic heartbeat frames to keep the connection alive.
     fn sendHeartbeatNow(self: *QQChannel, ws: *websocket.WsClient) void {
         var hb_buf: [64]u8 = undefined;
-        const seq: ?u32 = if (self.has_sequence.load(.acquire)) self.sequence.load(.acquire) else null;
+        const seq: ?i64 = if (self.has_sequence.load(.acquire)) self.sequence.load(.acquire) else null;
         const hb_payload = buildHeartbeatPayload(&hb_buf, seq) catch return;
         ws.writeText(hb_payload) catch |err| {
             log.warn("Heartbeat failed: {}", .{err});
@@ -2063,10 +2063,10 @@ test "qq handleGatewayEvent READY" {
     try std.testing.expect(ch.running.load(.acquire));
     try std.testing.expectEqualStrings("sess_abc123", ch.session_id.?);
     try std.testing.expect(ch.has_sequence.load(.acquire));
-    try std.testing.expectEqual(@as(u32, 1), ch.sequence.load(.acquire));
+    try std.testing.expectEqual(@as(i64, 1), ch.sequence.load(.acquire));
 }
 
-test "qq handleGatewayEvent sequence overflow clears state" {
+test "qq handleGatewayEvent accepts large 64-bit sequence" {
     const alloc = std.testing.allocator;
     var ch = QQChannel.init(alloc, .{});
     const ready_json =
@@ -2076,8 +2076,8 @@ test "qq handleGatewayEvent sequence overflow clears state" {
         if (ch.session_id) |sid| alloc.free(sid);
     }
     try ch.handleGatewayEvent(ready_json);
-    try std.testing.expect(!ch.has_sequence.load(.acquire));
-    try std.testing.expectEqual(@as(u32, 0), ch.sequence.load(.acquire));
+    try std.testing.expect(ch.has_sequence.load(.acquire));
+    try std.testing.expectEqual(@as(i64, 5000000000), ch.sequence.load(.acquire));
 }
 
 test "qq handleGatewayEvent ignores negative sequence" {
@@ -2091,7 +2091,7 @@ test "qq handleGatewayEvent ignores negative sequence" {
     }
     try ch.handleGatewayEvent(ready_json);
     try std.testing.expect(!ch.has_sequence.load(.acquire));
-    try std.testing.expectEqual(@as(u32, 0), ch.sequence.load(.acquire));
+    try std.testing.expectEqual(@as(i64, 0), ch.sequence.load(.acquire));
 }
 
 test "qq handleGatewayEvent invalid sequence clears previous value" {
@@ -2106,14 +2106,14 @@ test "qq handleGatewayEvent invalid sequence clears previous value" {
     ;
     try ch.handleGatewayEvent(ready_ok);
     try std.testing.expect(ch.has_sequence.load(.acquire));
-    try std.testing.expectEqual(@as(u32, 77), ch.sequence.load(.acquire));
+    try std.testing.expectEqual(@as(i64, 77), ch.sequence.load(.acquire));
 
-    const ready_overflow =
-        \\{"op":0,"s":5000000000,"t":"READY","d":{"session_id":"sess_overflow_after_ok"}}
+    const ready_negative =
+        \\{"op":0,"s":-8,"t":"READY","d":{"session_id":"sess_negative_after_ok"}}
     ;
-    try ch.handleGatewayEvent(ready_overflow);
+    try ch.handleGatewayEvent(ready_negative);
     try std.testing.expect(!ch.has_sequence.load(.acquire));
-    try std.testing.expectEqual(@as(u32, 0), ch.sequence.load(.acquire));
+    try std.testing.expectEqual(@as(i64, 0), ch.sequence.load(.acquire));
 }
 
 test "qq handleGatewayEvent MESSAGE_CREATE" {
