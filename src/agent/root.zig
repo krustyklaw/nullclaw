@@ -433,15 +433,19 @@ pub const Agent = struct {
     fn estimatePromptTokens(messages: []const ChatMessage) u64 {
         var total_chars: u64 = 0;
         for (messages) |msg| {
-            total_chars +|= msg.content.len;
             if (msg.name) |name| total_chars +|= name.len;
             if (msg.tool_call_id) |tool_call_id| total_chars +|= tool_call_id.len;
             if (msg.content_parts) |parts| {
+                // content_parts are the provider-facing payload; avoid double counting
+                // mirrored plain `content` unless parts are unexpectedly empty.
+                if (parts.len == 0) total_chars +|= msg.content.len;
                 for (parts) |part| switch (part) {
                     .text => |text| total_chars +|= text.len,
                     .image_url => |img| total_chars +|= img.url.len + 32,
-                    .image_base64 => |_| total_chars +|= 1024,
+                    .image_base64 => |img| total_chars +|= img.data.len + img.media_type.len + 32,
                 };
+            } else {
+                total_chars +|= msg.content.len;
             }
         }
 
@@ -2613,6 +2617,112 @@ test "Agent effective max_tokens reserves prompt headroom" {
     const capped = agent.effectiveMaxTokensForMessages(&messages);
     try std.testing.expect(capped < agent.max_tokens);
     try std.testing.expect(capped > 0);
+}
+
+test "Agent effective max_tokens does not double count plain content with content_parts" {
+    const allocator = std.testing.allocator;
+
+    var noop = observability.NoopObserver{};
+    var agent = Agent{
+        .allocator = allocator,
+        .provider = undefined,
+        .tools = &.{},
+        .tool_specs = try allocator.alloc(ToolSpec, 0),
+        .mem = null,
+        .observer = noop.observer(),
+        .model_name = "openai/gpt-4",
+        .temperature = 0.7,
+        .workspace_dir = "/tmp",
+        .max_tool_iterations = 10,
+        .max_history_messages = 50,
+        .auto_save = false,
+        .token_limit = 1_000,
+        .max_tokens = 512,
+        .history = .empty,
+        .total_tokens = 0,
+        .has_system_prompt = false,
+    };
+    defer agent.deinit();
+
+    const long_text = try allocator.alloc(u8, 2_000);
+    defer allocator.free(long_text);
+    @memset(long_text, 'a');
+
+    const parts = [_]providers.ContentPart{
+        .{ .text = long_text },
+    };
+    const messages = [_]ChatMessage{
+        .{
+            .role = .user,
+            .content = long_text,
+            .content_parts = &parts,
+        },
+    };
+
+    const capped = agent.effectiveMaxTokensForMessages(&messages);
+    try std.testing.expect(capped > 1);
+}
+
+test "Agent effective max_tokens scales with image_base64 size" {
+    const allocator = std.testing.allocator;
+
+    var noop = observability.NoopObserver{};
+    var agent = Agent{
+        .allocator = allocator,
+        .provider = undefined,
+        .tools = &.{},
+        .tool_specs = try allocator.alloc(ToolSpec, 0),
+        .mem = null,
+        .observer = noop.observer(),
+        .model_name = "openai/gpt-4",
+        .temperature = 0.7,
+        .workspace_dir = "/tmp",
+        .max_tool_iterations = 10,
+        .max_history_messages = 50,
+        .auto_save = false,
+        .token_limit = 4_000,
+        .max_tokens = 2_000,
+        .history = .empty,
+        .total_tokens = 0,
+        .has_system_prompt = false,
+    };
+    defer agent.deinit();
+
+    const small_base64 = try allocator.alloc(u8, 120);
+    defer allocator.free(small_base64);
+    @memset(small_base64, 'a');
+
+    const large_base64 = try allocator.alloc(u8, 12_000);
+    defer allocator.free(large_base64);
+    @memset(large_base64, 'b');
+
+    const small_parts = [_]providers.ContentPart{
+        .{ .text = "describe this image" },
+        .{ .image_base64 = .{ .data = small_base64, .media_type = "image/png" } },
+    };
+    const large_parts = [_]providers.ContentPart{
+        .{ .text = "describe this image" },
+        .{ .image_base64 = .{ .data = large_base64, .media_type = "image/png" } },
+    };
+
+    const small_messages = [_]ChatMessage{
+        .{
+            .role = .user,
+            .content = "describe this image",
+            .content_parts = &small_parts,
+        },
+    };
+    const large_messages = [_]ChatMessage{
+        .{
+            .role = .user,
+            .content = "describe this image",
+            .content_parts = &large_parts,
+        },
+    };
+
+    const capped_small = agent.effectiveMaxTokensForMessages(&small_messages);
+    const capped_large = agent.effectiveMaxTokensForMessages(&large_messages);
+    try std.testing.expect(capped_large < capped_small);
 }
 
 test "Agent.fromConfig keeps explicit max_tokens override" {
