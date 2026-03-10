@@ -120,6 +120,7 @@ nullclaw onboard --interactive
 
 - 只有在当前会话没有被显式 pin 到某个模型时，`model_routes` 才会生效。
 - 如果同时配置了 `deep` 和 `reasoning`，深度分析类请求会优先选择 `deep`。
+- `/model` 还会显示最近一次自动路由决策，方便查看选中了哪条路线以及原因。
 
 ### `channels`
 

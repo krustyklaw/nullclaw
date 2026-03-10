@@ -2541,6 +2541,9 @@ pub fn handleSlashCommand(self: anytype, message: []const u8) !?[]const u8 {
                 if (@hasField(@TypeOf(self.*), "model_pinned_by_user")) {
                     self.model_pinned_by_user = false;
                 }
+                if (@hasDecl(@TypeOf(self.*), "clearLastRouteTrace")) {
+                    self.clearLastRouteTrace();
+                }
                 if (@hasField(@TypeOf(self.*), "default_model")) {
                     try setModelName(self, self.default_model);
                 }
@@ -2561,6 +2564,9 @@ pub fn handleSlashCommand(self: anytype, message: []const u8) !?[]const u8 {
             try setModelName(self, cmd.arg);
             if (@hasField(@TypeOf(self.*), "model_pinned_by_user")) {
                 self.model_pinned_by_user = true;
+            }
+            if (@hasDecl(@TypeOf(self.*), "clearLastRouteTrace")) {
+                self.clearLastRouteTrace();
             }
             if (@hasField(@TypeOf(self.*), "default_model")) {
                 self.default_model = self.model_name;

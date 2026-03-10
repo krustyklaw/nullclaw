@@ -134,6 +134,7 @@ Notes:
 
 - `model_routes` are used only when the session is not pinned to an explicit model.
 - If both `deep` and `reasoning` are configured, deep-analysis prompts prefer `deep`.
+- `/model` shows the last auto-route decision so operators can see which route was picked and why.
 
 ### `channels`
 

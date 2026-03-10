@@ -246,6 +246,7 @@ pub const Agent = struct {
     default_model: []const u8 = "anthropic/claude-sonnet-4",
     model_routes: []const config_types.ModelRouteConfig = &.{},
     model_pinned_by_user: bool = false,
+    last_route_trace: ?[]u8 = null,
     configured_providers: []const config_types.ProviderEntry = &.{},
     fallback_providers: []const []const u8 = &.{},
     model_fallbacks: []const config_types.ModelFallbackEntry = &.{},
@@ -457,6 +458,7 @@ pub const Agent = struct {
         if (self.model_name_owned) self.allocator.free(self.model_name);
         if (self.default_provider_owned) self.allocator.free(self.default_provider);
         if (self.system_prompt_model_name) |model| self.allocator.free(model);
+        if (self.last_route_trace) |trace| self.allocator.free(trace);
         if (self.exec_node_id_owned and self.exec_node_id != null) self.allocator.free(self.exec_node_id.?);
         if (self.tts_provider_owned and self.tts_provider != null) self.allocator.free(self.tts_provider.?);
         if (self.pending_exec_command_owned and self.pending_exec_command != null) self.allocator.free(self.pending_exec_command.?);
@@ -806,11 +808,89 @@ pub const Agent = struct {
         return null;
     }
 
+    const RouteSelection = struct {
+        hint: []const u8,
+        route: config_types.ModelRouteConfig,
+        reason: []const u8,
+        matched_keyword: ?[]const u8 = null,
+        score: ?i32 = null,
+    };
+
+    fn routeSelectionForHint(
+        self: *const Agent,
+        hint: []const u8,
+        reason: []const u8,
+        matched_keyword: ?[]const u8,
+    ) ?RouteSelection {
+        const route = self.findModelRouteByHint(hint) orelse return null;
+        return .{
+            .hint = hint,
+            .route = route,
+            .reason = reason,
+            .matched_keyword = matched_keyword,
+        };
+    }
+
+    pub fn clearLastRouteTrace(self: *Agent) void {
+        if (self.last_route_trace) |trace| self.allocator.free(trace);
+        self.last_route_trace = null;
+    }
+
+    fn setLastRouteTrace(self: *Agent, selection: RouteSelection) !void {
+        self.clearLastRouteTrace();
+        const route_ref = try std.fmt.allocPrint(
+            self.allocator,
+            "{s}/{s}",
+            .{ selection.route.provider, selection.route.model },
+        );
+        defer self.allocator.free(route_ref);
+
+        if (selection.matched_keyword) |keyword| {
+            if (selection.score) |score| {
+                self.last_route_trace = try std.fmt.allocPrint(
+                    self.allocator,
+                    "{s} -> {s} ({s}: \"{s}\"; score {d})",
+                    .{ selection.hint, route_ref, selection.reason, keyword, score },
+                );
+            } else {
+                self.last_route_trace = try std.fmt.allocPrint(
+                    self.allocator,
+                    "{s} -> {s} ({s}: \"{s}\")",
+                    .{ selection.hint, route_ref, selection.reason, keyword },
+                );
+            }
+            return;
+        }
+
+        if (selection.score) |score| {
+            self.last_route_trace = try std.fmt.allocPrint(
+                self.allocator,
+                "{s} -> {s} ({s}; score {d})",
+                .{ selection.hint, route_ref, selection.reason, score },
+            );
+        } else {
+            self.last_route_trace = try std.fmt.allocPrint(
+                self.allocator,
+                "{s} -> {s} ({s})",
+                .{ selection.hint, route_ref, selection.reason },
+            );
+        }
+    }
+
     fn selectRouteHintForTurn(self: *const Agent, user_message: []const u8) ?[]const u8 {
+        const selection = self.routeSelectionForTurn(user_message) orelse return null;
+        return selection.hint;
+    }
+
+    fn routeSelectionForTurn(self: *const Agent, user_message: []const u8) ?RouteSelection {
         if (self.model_pinned_by_user or self.model_routes.len == 0) return null;
 
         if (std.mem.indexOf(u8, user_message, "[IMAGE:") != null and self.hasModelRouteHint("vision")) {
-            return "vision";
+            return self.routeSelectionForHint(
+                "vision",
+                "image input with configured vision route",
+                null,
+            );
         }
 
         const deep_keywords = [_][]const u8{
@@ -831,14 +911,30 @@ pub const Agent = struct {
         };
         inline for (deep_keywords) |keyword| {
             if (containsAsciiIgnoreCase(user_message, keyword)) {
-                if (self.hasModelRouteHint("deep")) return "deep";
-                if (self.hasModelRouteHint("reasoning")) return "reasoning";
+                if (self.hasModelRouteHint("deep")) {
+                    return self.routeSelectionForHint("deep", "matched deep-task keyword", keyword);
+                }
+                if (self.hasModelRouteHint("reasoning")) {
+                    return self.routeSelectionForHint("reasoning", "matched deep-task keyword", keyword);
+                }
             }
         }
 
         if (user_message.len > 600 or self.history.items.len >= 24) {
-            if (self.hasModelRouteHint("deep")) return "deep";
-            if (self.hasModelRouteHint("reasoning")) return "reasoning";
+            if (self.hasModelRouteHint("deep")) {
+                return self.routeSelectionForHint(
+                    "deep",
+                    "long prompt or deep conversation context",
+                    null,
+                );
+            }
+            if (self.hasModelRouteHint("reasoning")) {
+                return self.routeSelectionForHint(
+                    "reasoning",
+                    "long prompt or deep conversation context",
+                    null,
+                );
+            }
         }
 
         const fast_keywords = [_][]const u8{
@@ -870,29 +966,41 @@ pub const Agent = struct {
         if (user_message.len <= 120) {
             inline for (fast_keywords) |keyword| {
                 if (containsAsciiIgnoreCase(user_message, keyword) and self.hasModelRouteHint("fast")) {
-                    return "fast";
+                    return self.routeSelectionForHint("fast", "matched fast-task keyword", keyword);
                 }
             }
         }
         if (user_message.len <= 220) {
             inline for (structured_fast_keywords) |keyword| {
                 if (containsAsciiIgnoreCase(user_message, keyword) and self.hasModelRouteHint("fast")) {
-                    return "fast";
+                    return self.routeSelectionForHint(
+                        "fast",
+                        "matched structured fast-task keyword",
+                        keyword,
+                    );
                 }
             }
         }
 
-        if (self.hasModelRouteHint("balanced")) return "balanced";
-        if (self.hasModelRouteHint("fast")) return "fast";
-        if (self.hasModelRouteHint("deep")) return "deep";
-        if (self.hasModelRouteHint("reasoning")) return "reasoning";
+        if (self.hasModelRouteHint("balanced")) {
+            return self.routeSelectionForHint("balanced", "default balanced route", null);
+        }
+        if (self.hasModelRouteHint("fast")) {
+            return self.routeSelectionForHint("fast", "fallback fast route", null);
+        }
+        if (self.hasModelRouteHint("deep")) {
+            return self.routeSelectionForHint("deep", "fallback deep route", null);
+        }
+        if (self.hasModelRouteHint("reasoning")) {
+            return self.routeSelectionForHint("reasoning", "fallback reasoning route", null);
+        }
         return null;
     }
 
-    fn routeModelNameForTurn(self: *const Agent, allocator: std.mem.Allocator, user_message: []const u8) !?[]u8 {
-        const hint = self.selectRouteHintForTurn(user_message) orelse return null;
-        const route = self.findModelRouteByHint(hint) orelse return null;
-        return try std.fmt.allocPrint(allocator, "{s}/{s}", .{ route.provider, route.model });
+    fn routeModelNameForTurn(self: *Agent, allocator: std.mem.Allocator, user_message: []const u8) !?[]u8 {
+        const selection = self.routeSelectionForTurn(user_message) orelse return null;
+        try self.setLastRouteTrace(selection);
+        return try std.fmt.allocPrint(allocator, "{s}/{s}", .{ selection.route.provider, selection.route.model });
     }
 
     fn isExecToolName(tool_name: []const u8) bool {
@@ -989,6 +1097,23 @@ pub const Agent = struct {
             }
         } else {
             try w.writeAll(" (no configured fallbacks)");
+        }
+
+        try w.writeAll("\nAuto-routing: ");
+        if (self.model_routes.len == 0) {
+            try w.writeAll("not configured");
+        } else {
+            try w.writeAll("configured");
+            if (self.model_pinned_by_user) {
+                try w.writeAll(" (currently pinned off for this session)");
+            }
+            if (self.last_route_trace) |trace| {
+                try w.print("\nLast auto-route: {s}", .{trace});
+            } else if (self.model_pinned_by_user) {
+                try w.writeAll("\nLast auto-route: inactive while the model is pinned");
+            } else {
+                try w.writeAll("\nLast auto-route: no decision recorded yet");
+            }
         }
 
         try w.writeAll("\nSwitch: /model <name>");
@@ -3920,6 +4045,54 @@ test "auto route selects deep model for investigation prompt" {
     defer allocator.free(routed);
 
     try std.testing.expectEqualStrings("openrouter/anthropic/claude-opus-4", routed);
+}
+
+test "auto route records last route trace for short structured prompt" {
+    const allocator = std.testing.allocator;
+    var agent = try makeTestAgent(allocator);
+    defer agent.deinit();
+    agent.model_routes = &.{
+        .{ .hint = "fast", .provider = "groq", .model = "llama-3.3-8b" },
+        .{ .hint = "balanced", .provider = "openrouter", .model = "anthropic/claude-sonnet-4" },
+    };
+
+    const routed = (try agent.routeModelNameForTurn(
+        allocator,
+        "Extract the version from 'release-1.2.3' and return only the semver.",
+    )).?;
+    defer allocator.free(routed);
+
+    try std.testing.expectEqualStrings("groq/llama-3.3-8b", routed);
+    try std.testing.expect(agent.last_route_trace != null);
+    try std.testing.expect(std.mem.indexOf(u8, agent.last_route_trace.?, "fast -> groq/llama-3.3-8b") != null);
+    try std.testing.expect(std.mem.indexOf(u8, agent.last_route_trace.?, "matched") != null);
+    try std.testing.expect(
+        std.mem.indexOf(u8, agent.last_route_trace.?, "\"version\"") != null or
+            std.mem.indexOf(u8, agent.last_route_trace.?, "\"extract\"") != null or
+            std.mem.indexOf(u8, agent.last_route_trace.?, "\"return only\"") != null,
+    );
+}
+
+test "model status reports last auto-route trace" {
+    const allocator = std.testing.allocator;
+    var agent = try makeTestAgent(allocator);
+    defer agent.deinit();
+    agent.model_routes = &.{
+        .{ .hint = "fast", .provider = "groq", .model = "llama-3.3-8b" },
+        .{ .hint = "balanced", .provider = "openrouter", .model = "anthropic/claude-sonnet-4" },
+    };
+
+    const routed = (try agent.routeModelNameForTurn(
+        allocator,
+        "Extract the version from 'release-1.2.3' and return only the semver.",
+    )).?;
+    defer allocator.free(routed);
+
+    const status = try agent.formatModelStatus();
+    defer allocator.free(status);
+
+    try std.testing.expect(std.mem.indexOf(u8, status, "Auto-routing: configured") != null);
+    try std.testing.expect(std.mem.indexOf(u8, status, "Last auto-route: fast -> groq/llama-3.3-8b") != null);
 }
 
 test "auto route is disabled when model is pinned" {
