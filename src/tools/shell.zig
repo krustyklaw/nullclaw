@@ -8,7 +8,9 @@ const JsonObjectMap = root.JsonObjectMap;
 const isResolvedPathAllowed = @import("path_security.zig").isResolvedPathAllowed;
 const SecurityPolicy = @import("../security/policy.zig").SecurityPolicy;
 const json_miniparse = @import("../json_miniparse.zig");
+const command_summary = @import("../command_summary.zig");
 const UNAVAILABLE_WORKSPACE_SENTINEL = "/__nullclaw_workspace_unavailable__";
+const log = std.log.scoped(.shell);
 
 /// Default maximum shell command execution time (nanoseconds).
 const DEFAULT_SHELL_TIMEOUT_NS: u64 = 60 * std.time.ns_per_s;
@@ -143,7 +145,15 @@ pub const ShellTool = struct {
         if (self.policy) |pol| {
             _ = pol.validateCommandExecution(command, false) catch |err| {
                 return switch (err) {
-                    error.CommandNotAllowed => ToolResult.fail("Command not allowed by security policy"),
+                    error.CommandNotAllowed => blk: {
+                        const summary = command_summary.summarizeBlockedCommand(command);
+                        log.warn("command blocked by security policy: head={s} bytes={d} assignments={d}", .{
+                            summary.head,
+                            summary.byte_len,
+                            summary.assignment_count,
+                        });
+                        break :blk ToolResult.fail("Command not allowed by security policy");
+                    },
                     error.HighRiskBlocked => ToolResult.fail("High-risk command blocked by security policy"),
                     error.ApprovalRequired => blk: {
                         const msg = try std.fmt.allocPrint(allocator, "Command requires approval (medium/high risk): {s}", .{command});
