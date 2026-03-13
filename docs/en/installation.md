@@ -181,9 +181,11 @@ Use the target that matches the phone or emulator architecture.
 See [`.github/workflows/release.yml`](../../.github/workflows/release.yml) for a complete example of generating the `--libc` file from the Android NDK.
 Official releases also attach matching Android / Termux binaries built for Android API 24.
 
-## Add Binary to PATH
+## Add binary to PATH
 
-### macOS/Linux (zsh/bash)
+### Complied binary file
+
+#### macOS/Linux（zsh/bash）
 
 ```bash
 zig build -Doptimize=ReleaseSmall -p "$HOME/.local"
@@ -191,8 +193,12 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
 # bash users: use ~/.bashrc
 source ~/.zshrc
 ```
+```bash
+zig build -Doptimize=ReleaseSmall -p "$HOME/.local"
+source ~/.zshrc
+```
 
-### Windows (PowerShell)
+#### Windows（PowerShell）
 
 ```powershell
 zig build -Doptimize=ReleaseSmall -p "$HOME\.local"
@@ -203,6 +209,15 @@ if (-not ($user_path -split ";" | Where-Object { $_ -eq $bin })) {
   [Environment]::SetEnvironmentVariable("Path", "$user_path;$bin", "User")
 }
 $env:Path = "$env:Path;$bin"
+```
+
+### Downloaded nullclaw binary file (Windows,Powershell)
+You can rename the downloaded nullclaw binary file(.exe) to nullclaw.exe，then run the following commands with administrator privileges in Powershell, that will add the directory which the binary file is located in to Environment Variable PATH in Windows:
+
+```Powershell 
+$old = [Environment]::GetEnvironmentVariable("Path", "Machine")
+$new = "$old;x:\nullclaww二进制文件所在目录"
+[Environment]::SetEnvironmentVariable("Path", $new, "Machine")
 ```
 
 ## Verify Installation
