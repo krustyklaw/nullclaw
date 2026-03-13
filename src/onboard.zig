@@ -509,7 +509,7 @@ pub fn fetchModelsFromApi(allocator: std.mem.Allocator, provider: []const u8, ap
 
     // Tests must stay deterministic and offline; production can consult the
     // public models.dev catalog as a secondary source.
-    if (!builtin.is_test) {
+    if (!builtin.is_test and shouldUseModelsDevCatalog(canonical, api_key)) {
         if (fetchModelsFromModelsDev(allocator, canonical) catch null) |models| {
             return models;
         }
@@ -572,6 +572,21 @@ fn modelsDevProviderKey(provider: []const u8) ?[]const u8 {
         if (std.mem.eql(u8, entry.canonical, provider)) return entry.key;
     }
     return null;
+}
+
+fn shouldUseModelsDevCatalog(provider: []const u8, api_key: ?[]const u8) bool {
+    if (modelsDevProviderKey(provider) == null) return false;
+    if (std.mem.eql(u8, provider, "openai") or std.mem.eql(u8, provider, "groq")) {
+        return api_key == null;
+    }
+    return true;
+}
+
+fn modelsCacheProviderKey(allocator: std.mem.Allocator, provider: []const u8, api_key: ?[]const u8) ![]const u8 {
+    if (!shouldUseModelsDevCatalog(provider, api_key)) {
+        return try allocator.dupe(u8, provider);
+    }
+    return try std.fmt.allocPrint(allocator, "{s}@models.dev", .{provider});
 }
 
 fn fetchModelsFromModelsDev(allocator: std.mem.Allocator, provider: []const u8) !?[][]const u8 {
@@ -724,9 +739,11 @@ fn loadModelsWithCacheInner(allocator: std.mem.Allocator, cache_dir: []const u8,
     const canonical = canonicalProviderName(provider);
     const cache_path = try std.fmt.allocPrint(allocator, "{s}/models_cache.json", .{cache_dir});
     defer allocator.free(cache_path);
+    const cache_provider = try modelsCacheProviderKey(allocator, canonical, api_key);
+    defer allocator.free(cache_provider);
 
     // Try reading cache file
-    if (readCachedModels(allocator, cache_path, canonical)) |cached| {
+    if (readCachedModels(allocator, cache_path, cache_provider)) |cached| {
         return cached;
     } else |_| {}
 
@@ -735,7 +752,7 @@ fn loadModelsWithCacheInner(allocator: std.mem.Allocator, cache_dir: []const u8,
 
     // Best-effort: save to cache (coerce [][]const u8 -> []const []const u8)
     const models_const: []const []const u8 = models;
-    saveCachedModels(allocator, cache_path, canonical, models_const) catch {};
+    saveCachedModels(allocator, cache_path, cache_provider, models_const) catch {};
 
     return models;
 }
@@ -4036,6 +4053,57 @@ test "cache read returns error for expired cache" {
 
     const result = readCachedModels(std.testing.allocator, cache_path, "myprov");
     try std.testing.expectError(error.CacheExpired, result);
+}
+
+test "modelsCacheProviderKey keeps public catalog separate from native listings" {
+    const public_key = try modelsCacheProviderKey(std.testing.allocator, "openai", null);
+    defer std.testing.allocator.free(public_key);
+    try std.testing.expectEqualStrings("openai@models.dev", public_key);
+
+    const native_key = try modelsCacheProviderKey(std.testing.allocator, "openai", "test-key");
+    defer std.testing.allocator.free(native_key);
+    try std.testing.expectEqualStrings("openai", native_key);
+
+    const anthropic_key = try modelsCacheProviderKey(std.testing.allocator, "anthropic", null);
+    defer std.testing.allocator.free(anthropic_key);
+    try std.testing.expectEqualStrings("anthropic@models.dev", anthropic_key);
+}
+
+test "loadModelsWithCache keeps public and native cache entries separate" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    const base = try tmp.dir.realpathAlloc(std.testing.allocator, ".");
+    defer std.testing.allocator.free(base);
+    const cache_path = try std.fs.path.join(std.testing.allocator, &.{ base, "models_cache.json" });
+    defer std.testing.allocator.free(cache_path);
+
+    const cache_json = try std.fmt.allocPrint(
+        std.testing.allocator,
+        "{{\"fetched_at\": {d}, \"openai\": [\"gpt-native\"], \"openai@models.dev\": [\"gpt-public\"]}}",
+        .{std.time.timestamp()},
+    );
+    defer std.testing.allocator.free(cache_json);
+
+    const file = try tmp.dir.createFile("models_cache.json", .{});
+    defer file.close();
+    try file.writeAll(cache_json);
+
+    const public_models = try loadModelsWithCache(std.testing.allocator, base, "openai", null);
+    defer {
+        for (public_models) |m| std.testing.allocator.free(m);
+        std.testing.allocator.free(public_models);
+    }
+    try std.testing.expectEqual(@as(usize, 1), public_models.len);
+    try std.testing.expectEqualStrings("gpt-public", public_models[0]);
+
+    const native_models = try loadModelsWithCache(std.testing.allocator, base, "openai", "test-key");
+    defer {
+        for (native_models) |m| std.testing.allocator.free(m);
+        std.testing.allocator.free(native_models);
+    }
+    try std.testing.expectEqual(@as(usize, 1), native_models.len);
+    try std.testing.expectEqualStrings("gpt-native", native_models[0]);
 }
 
 test "loadModelsWithCache falls back on fetch failure" {
