@@ -33,6 +33,7 @@ const channels = @import("channels/root.zig");
 const bus_mod = @import("bus.zig");
 const a2a = @import("a2a.zig");
 const thread_stacks = @import("thread_stacks.zig");
+const channel_adapters = @import("channel_adapters.zig");
 const ConversationContext = @import("agent/prompt.zig").ConversationContext;
 const buildConversationContext = @import("agent/prompt.zig").buildConversationContext;
 
@@ -59,6 +60,16 @@ const GatewayObservedToolEvent = struct {
     kind: GatewayObservedToolEventKind,
     tool: []u8,
     success: bool = false,
+};
+
+const WebhookRouting = struct {
+    session_key: []const u8,
+    owned_session_key: ?[]const u8 = null,
+    conversation_context: ?ConversationContext = null,
+
+    fn deinit(self: *WebhookRouting, allocator: std.mem.Allocator) void {
+        if (self.owned_session_key) |owned| allocator.free(owned);
+    }
 };
 
 fn simpleConversationContext(
@@ -1438,6 +1449,155 @@ fn resolveRouteSessionKey(
         return route.session_key;
     }
     return fallback;
+}
+
+fn qqPeerRefFromInbound(inbound: *const bus_mod.InboundMessage) ?agent_routing.PeerRef {
+    const meta = inbound.metadata_json;
+    const is_group = if (meta) |json| std.mem.indexOf(u8, json, "\"is_group\":true") != null else false;
+    const is_dm = if (meta) |json| std.mem.indexOf(u8, json, "\"is_dm\":true") != null else false;
+    const channel_id = if (meta) |json| jsonStringField(json, "channel_id") else null;
+    const group_id = if (meta) |json| jsonStringField(json, "group_openid") orelse jsonStringField(json, "group_id") else null;
+
+    if (is_group) {
+        const peer_id = group_id orelse channel_id orelse return null;
+        return .{ .kind = .group, .id = peer_id };
+    }
+    if (is_dm or std.mem.startsWith(u8, inbound.chat_id, "dm:")) {
+        return .{ .kind = .direct, .id = inbound.sender_id };
+    }
+
+    const raw_channel = channel_id orelse inbound.chat_id;
+    const normalized_channel = if (std.mem.startsWith(u8, raw_channel, "channel:"))
+        raw_channel["channel:".len..]
+    else
+        raw_channel;
+    if (normalized_channel.len == 0) return null;
+    return .{ .kind = .channel, .id = normalized_channel };
+}
+
+fn qqSessionKeyRouted(
+    allocator: std.mem.Allocator,
+    inbound: *const bus_mod.InboundMessage,
+    cfg_opt: ?*const Config,
+) ?[]const u8 {
+    const cfg = cfg_opt orelse return null;
+    const account_id = if (inbound.metadata_json) |json|
+        (jsonStringField(json, "account_id") orelse "default")
+    else
+        "default";
+    const peer = qqPeerRefFromInbound(inbound) orelse return null;
+
+    const route = agent_routing.resolveRouteWithSession(allocator, .{
+        .channel = "qq",
+        .account_id = account_id,
+        .peer = peer,
+    }, cfg.agent_bindings, cfg.agents, cfg.session) catch return null;
+    allocator.free(route.main_session_key);
+    return route.session_key;
+}
+
+fn teamsPeerRef(
+    body: []const u8,
+    from_id: []const u8,
+    conversation_id: []const u8,
+) struct {
+    peer: agent_routing.PeerRef,
+    is_dm: bool,
+} {
+    const conversation_type = teamsNestedField(body, "conversation", "conversationType") orelse "";
+    const is_dm = conversation_type.len == 0 or std.mem.eql(u8, conversation_type, "personal");
+    return .{
+        .peer = .{
+            .kind = if (is_dm) .direct else .channel,
+            .id = if (is_dm) from_id else conversation_id,
+        },
+        .is_dm = is_dm,
+    };
+}
+
+fn teamsSessionKeyRouted(
+    allocator: std.mem.Allocator,
+    fallback_buf: []u8,
+    config: *const Config,
+    body: []const u8,
+    account_id: []const u8,
+    tenant_id: []const u8,
+    conversation_id: []const u8,
+    from_id: []const u8,
+) []const u8 {
+    const fallback = std.fmt.bufPrint(fallback_buf, "teams:{s}:{s}", .{ tenant_id, conversation_id }) catch "teams:default";
+    const peer_info = teamsPeerRef(body, from_id, conversation_id);
+    return resolveRouteSessionKey(
+        allocator,
+        config,
+        "teams",
+        account_id,
+        peer_info.peer,
+        fallback,
+    );
+}
+
+fn webhookRouting(
+    allocator: std.mem.Allocator,
+    body: []const u8,
+    bearer: ?[]const u8,
+    cfg_opt: ?*const Config,
+) WebhookRouting {
+    const owned_fallback_key = std.fmt.allocPrint(allocator, "webhook:{s}", .{bearer orelse "anon"}) catch null;
+    const fallback_key = owned_fallback_key orelse "webhook:anon";
+
+    const channel = jsonStringField(body, "channel");
+    const peer_kind = if (jsonStringField(body, "peer_kind")) |raw| channel_adapters.parsePeerKind(raw) else null;
+    const peer_id = jsonStringField(body, "peer_id");
+    const sender_id = jsonStringField(body, "sender_id") orelse bearer;
+    const sender_username = jsonStringField(body, "sender_username");
+    const sender_display_name = jsonStringField(body, "sender_display_name");
+    const account_id = jsonStringField(body, "account_id");
+
+    const conversation_context = if (channel != null or peer_id != null or sender_id != null or account_id != null or sender_username != null or sender_display_name != null)
+        buildConversationContext(.{
+            .channel = channel,
+            .account_id = account_id,
+            .sender_id = sender_id,
+            .sender_username = sender_username,
+            .sender_display_name = sender_display_name,
+            .peer_id = peer_id,
+            .is_group = if (peer_kind) |kind| kind != .direct else null,
+            .group_id = if (peer_kind) |kind| if (kind == .direct) null else peer_id else null,
+        })
+    else
+        null;
+
+    if (cfg_opt) |cfg| {
+        if (channel) |channel_name| {
+            if (peer_kind) |kind| {
+                if (peer_id) |resolved_peer_id| {
+                    const route = agent_routing.resolveRouteWithSession(allocator, .{
+                        .channel = channel_name,
+                        .account_id = account_id orelse "default",
+                        .peer = .{ .kind = kind, .id = resolved_peer_id },
+                    }, cfg.agent_bindings, cfg.agents, cfg.session) catch return .{
+                        .session_key = fallback_key,
+                        .owned_session_key = owned_fallback_key,
+                        .conversation_context = conversation_context,
+                    };
+                    if (owned_fallback_key) |owned| allocator.free(owned);
+                    allocator.free(route.main_session_key);
+                    return .{
+                        .session_key = route.session_key,
+                        .owned_session_key = route.session_key,
+                        .conversation_context = conversation_context,
+                    };
+                }
+            }
+        }
+    }
+
+    return .{
+        .session_key = fallback_key,
+        .owned_session_key = owned_fallback_key,
+        .conversation_context = conversation_context,
+    };
 }
 
 fn telegramChatIsGroup(allocator: std.mem.Allocator, body: []const u8) bool {
@@ -2998,21 +3158,21 @@ fn handleQqWebhookRoute(ctx: *WebhookHandlerContext) void {
         }
 
         if (ctx.session_mgr_opt) |sm| {
+            const routed_session_key: ?[]const u8 = qqSessionKeyRouted(ctx.req_allocator, &inbound, ctx.config_opt);
+            defer if (routed_session_key) |owned| ctx.req_allocator.free(owned);
+            const session_key = routed_session_key orelse inbound.session_key;
+            const peer = qqPeerRefFromInbound(&inbound);
             const meta = inbound.metadata_json;
             const account_id = if (meta) |json| jsonStringField(json, "account_id") else null;
-            const is_group = if (meta) |json| std.mem.indexOf(u8, json, "\"is_group\":true") != null else false;
-            const group_id = if (meta) |json|
-                (jsonStringField(json, "group_openid") orelse jsonStringField(json, "channel_id"))
-            else
-                null;
-            const conversation_context: ?ConversationContext = simpleConversationContext(
-                "qq",
-                account_id,
-                inbound.sender_id,
-                is_group,
-                group_id,
-            );
-            const reply: ?[]const u8 = sm.processMessage(inbound.session_key, inbound.content, conversation_context) catch |err| blk: {
+            const conversation_context = buildConversationContext(.{
+                .channel = "qq",
+                .account_id = account_id,
+                .sender_id = inbound.sender_id,
+                .peer_id = if (peer) |resolved| resolved.id else null,
+                .is_group = if (peer) |resolved| resolved.kind != .direct else null,
+                .group_id = if (peer) |resolved| if (resolved.kind == .direct) null else resolved.id else null,
+            });
+            const reply: ?[]const u8 = sm.processMessage(session_key, inbound.content, conversation_context) catch |err| blk: {
                 qq_channel.sendMessage(inbound.chat_id, userFacingAgentError(err)) catch {};
                 break :blk null;
             };
@@ -3260,13 +3420,18 @@ fn handleTeamsWebhookRoute(ctx: *WebhookHandlerContext) void {
     const from_id = teamsNestedField(body, "from", "id") orelse "unknown";
     const from_name = teamsNestedField(body, "from", "name");
 
-    // Build session key: teams:{tenant_id}:{conversation_id}
+    const peer_info = teamsPeerRef(body, from_id, conversation_id);
     var key_buf: [256]u8 = undefined;
-    const sk = std.fmt.bufPrint(&key_buf, "teams:{s}:{s}", .{ teams_cfg.tenant_id, conversation_id }) catch {
-        ctx.response_status = "500 Internal Server Error";
-        ctx.response_body = "{\"error\":\"session key overflow\"}";
-        return;
-    };
+    const sk = teamsSessionKeyRouted(
+        ctx.req_allocator,
+        &key_buf,
+        config,
+        body,
+        teams_cfg.account_id,
+        teams_cfg.tenant_id,
+        conversation_id,
+        from_id,
+    );
 
     // Build chat_id as "serviceUrl|conversationId" for outbound routing
     var chat_buf: [512]u8 = undefined;
@@ -3280,8 +3445,16 @@ fn handleTeamsWebhookRoute(ctx: *WebhookHandlerContext) void {
     var meta_buf: [512]u8 = undefined;
     const metadata = std.fmt.bufPrint(
         &meta_buf,
-        "{{\"account_id\":\"{s}\",\"service_url\":\"{s}\",\"conversation_id\":\"{s}\",\"from_id\":\"{s}\"}}",
-        .{ teams_cfg.account_id, service_url, conversation_id, from_id },
+        "{{\"account_id\":\"{s}\",\"service_url\":\"{s}\",\"conversation_id\":\"{s}\",\"from_id\":\"{s}\",\"peer_kind\":\"{s}\",\"peer_id\":\"{s}\",\"is_dm\":{s}}}",
+        .{
+            teams_cfg.account_id,
+            service_url,
+            conversation_id,
+            from_id,
+            if (peer_info.is_dm) "direct" else "channel",
+            peer_info.peer.id,
+            if (peer_info.is_dm) "true" else "false",
+        },
     ) catch null;
 
     // Capture conversation reference if this is the notification channel
@@ -3293,9 +3466,12 @@ fn handleTeamsWebhookRoute(ctx: *WebhookHandlerContext) void {
 
     const conversation_context = buildConversationContext(.{
         .channel = "teams",
+        .account_id = teams_cfg.account_id,
         .sender_uuid = from_id,
         .sender_name = from_name,
-        .is_group = false,
+        .peer_id = peer_info.peer.id,
+        .is_group = !peer_info.is_dm,
+        .group_id = if (peer_info.is_dm) null else peer_info.peer.id,
     });
 
     if (ctx.state.event_bus) |eb| {
@@ -3886,15 +4062,15 @@ pub fn run(allocator: std.mem.Allocator, host: []const u8, port: u16, config_ptr
                         const body = extractBody(raw);
                         if (body) |b| {
                             const msg_text = jsonStringField(b, "message") orelse jsonStringField(b, "text") orelse b;
-                            var sk_buf: [128]u8 = undefined;
-                            const session_key = std.fmt.bufPrint(&sk_buf, "webhook:{s}", .{bearer orelse "anon"}) catch "webhook:anon";
+                            var routing = webhookRouting(req_allocator, b, bearer, config_opt);
+                            defer routing.deinit(req_allocator);
 
                             if (state.event_bus) |eb| {
-                                _ = publishToBus(eb, state.allocator, "webhook", bearer orelse "anon", session_key, msg_text, session_key, null);
+                                _ = publishToBus(eb, state.allocator, "webhook", bearer orelse "anon", routing.session_key, msg_text, routing.session_key, null);
                                 response_body = "{\"status\":\"received\"}";
                             } else if (session_mgr_opt) |*sm| {
                                 const start_seq = gateway_thread_observer.currentSeq();
-                                const reply: ?[]const u8 = sm.processMessage(session_key, msg_text, null) catch |err| blk: {
+                                const reply: ?[]const u8 = sm.processMessage(routing.session_key, msg_text, routing.conversation_context) catch |err| blk: {
                                     response_body = userFacingAgentErrorJson(err);
                                     break :blk null;
                                 };
@@ -5387,6 +5563,136 @@ test "maxSessionKeyRouted uses chat target for group chats" {
 
     const key = maxSessionKeyRouted(allocator, &key_buf, "alice", "chat-777", true, &cfg, "max-main");
     try std.testing.expectEqualStrings("agent:max-group-agent:max:group:chat-777", key);
+}
+
+test "qqSessionKeyRouted uses sender identity for direct chats" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var cfg = Config{
+        .workspace_dir = "/tmp",
+        .config_path = "/tmp/config.json",
+        .allocator = allocator,
+        .agent_bindings = &[_]agent_routing.AgentBinding{
+            .{
+                .agent_id = "qq-direct-agent",
+                .match = .{
+                    .channel = "qq",
+                    .account_id = "qq-main",
+                    .peer = .{ .kind = .direct, .id = "openid-user" },
+                },
+            },
+        },
+    };
+
+    const inbound = try bus_mod.makeInboundFull(
+        allocator,
+        "qq",
+        "openid-user",
+        "c2c:openid-user:msg001",
+        "hello",
+        "qq:c2c:openid-user",
+        &.{},
+        "{\"account_id\":\"qq-main\",\"is_dm\":true,\"user_openid\":\"openid-user\"}",
+    );
+    defer inbound.deinit(allocator);
+
+    const key = qqSessionKeyRouted(allocator, &inbound, &cfg) orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqualStrings("agent:qq-direct-agent:qq:direct:openid-user", key);
+}
+
+test "teamsSessionKeyRouted uses sender identity for personal chats" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var key_buf: [256]u8 = undefined;
+    var cfg = Config{
+        .workspace_dir = "/tmp",
+        .config_path = "/tmp/config.json",
+        .allocator = allocator,
+        .agent_bindings = &[_]agent_routing.AgentBinding{
+            .{
+                .agent_id = "teams-direct-agent",
+                .match = .{
+                    .channel = "teams",
+                    .account_id = "teams-main",
+                    .peer = .{ .kind = .direct, .id = "user-42" },
+                },
+            },
+        },
+    };
+
+    const body =
+        \\{"type":"message","text":"hi","conversation":{"id":"conv-1","conversationType":"personal"},"from":{"id":"user-42"}}
+    ;
+    const key = teamsSessionKeyRouted(allocator, &key_buf, &cfg, body, "teams-main", "tenant-1", "conv-1", "user-42");
+    try std.testing.expectEqualStrings("agent:teams-direct-agent:teams:direct:user-42", key);
+}
+
+test "teamsSessionKeyRouted uses conversation id for channel chats" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var key_buf: [256]u8 = undefined;
+    var cfg = Config{
+        .workspace_dir = "/tmp",
+        .config_path = "/tmp/config.json",
+        .allocator = allocator,
+        .agent_bindings = &[_]agent_routing.AgentBinding{
+            .{
+                .agent_id = "teams-channel-agent",
+                .match = .{
+                    .channel = "teams",
+                    .account_id = "teams-main",
+                    .peer = .{ .kind = .channel, .id = "conv-chan" },
+                },
+            },
+        },
+    };
+
+    const body =
+        \\{"type":"message","text":"hi","conversation":{"id":"conv-chan","conversationType":"channel"},"from":{"id":"user-42"}}
+    ;
+    const key = teamsSessionKeyRouted(allocator, &key_buf, &cfg, body, "teams-main", "tenant-1", "conv-chan", "user-42");
+    try std.testing.expectEqualStrings("agent:teams-channel-agent:teams:channel:conv-chan", key);
+}
+
+test "webhookRouting uses route engine when standardized peer metadata is present" {
+    var arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+
+    var cfg = Config{
+        .workspace_dir = "/tmp",
+        .config_path = "/tmp/config.json",
+        .allocator = allocator,
+        .agent_bindings = &[_]agent_routing.AgentBinding{
+            .{
+                .agent_id = "web-direct-agent",
+                .match = .{
+                    .channel = "web",
+                    .account_id = "web-main",
+                    .peer = .{ .kind = .direct, .id = "session-1" },
+                },
+            },
+        },
+    };
+
+    var routing = webhookRouting(
+        allocator,
+        "{\"channel\":\"web\",\"account_id\":\"web-main\",\"peer_kind\":\"direct\",\"peer_id\":\"session-1\",\"sender_id\":\"user-1\",\"message\":\"hi\"}",
+        "bearer-1",
+        &cfg,
+    );
+    defer routing.deinit(allocator);
+
+    try std.testing.expectEqualStrings("agent:web-direct-agent:web:direct:session-1", routing.session_key);
+    try std.testing.expect(routing.conversation_context != null);
+    try std.testing.expectEqualStrings("web", routing.conversation_context.?.channel.?);
+    try std.testing.expectEqualStrings("session-1", routing.conversation_context.?.peer_id.?);
 }
 
 // ── extractBody tests ────────────────────────────────────────────
