@@ -358,7 +358,7 @@ fn downloadToFile(allocator: std.mem.Allocator, url: []const u8, file: *std.fs.F
     child.stderr_behavior = .Ignore;
 
     child.spawn() catch |err| {
-        log.err("curl spawn failed: {}", .{err});
+        if (!builtin.is_test) log.err("curl spawn failed: {}", .{err});
         return error.CurlFailed;
     };
 
@@ -370,7 +370,7 @@ fn downloadToFile(allocator: std.mem.Allocator, url: []const u8, file: *std.fs.F
 
     while (true) {
         const bytes_read = stdout.read(&buffer) catch |err| {
-            log.err("curl read failed: {}", .{err});
+            if (!builtin.is_test) log.err("curl read failed: {}", .{err});
             _ = child.kill() catch {};
             _ = child.wait() catch {};
             return error.CurlFailed;
@@ -379,7 +379,7 @@ fn downloadToFile(allocator: std.mem.Allocator, url: []const u8, file: *std.fs.F
         if (bytes_read == 0) break;
 
         file.writeAll(buffer[0..bytes_read]) catch |err| {
-            log.err("download write failed: {}", .{err});
+            if (!builtin.is_test) log.err("download write failed: {}", .{err});
             _ = child.kill() catch {};
             _ = child.wait() catch {};
             return err;
@@ -388,13 +388,13 @@ fn downloadToFile(allocator: std.mem.Allocator, url: []const u8, file: *std.fs.F
     }
 
     const term = child.wait() catch |err| {
-        log.err("curl wait failed: {}", .{err});
+        if (!builtin.is_test) log.err("curl wait failed: {}", .{err});
         return error.CurlFailed;
     };
 
     switch (term) {
         .Exited => |code| if (code != 0) {
-            log.err("curl exited with code: {}", .{code});
+            if (!builtin.is_test) log.err("curl exited with code: {}", .{code});
             return error.CurlFailed;
         },
         else => return error.CurlFailed,
