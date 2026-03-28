@@ -1579,64 +1579,35 @@
                 </div>
 
                 <div class="wizard-card">
-                    <!-- Step 0: Provider -->
+                    <!-- Step 0: Names -->
                     <div class="wizard-step active" id="step-0">
-                        <div class="step-title">Choose your AI provider</div>
-                        <div class="step-desc">
-                            Select who powers your assistant. OpenRouter is a
-                            great first choice — it gives you access to many
-                            models with one API key.
+                        <div class="step-title" id="step-0-title">
+                            Welcome! Let's get to know each other
+                        </div>
+                        <div class="step-desc" id="step-0-desc">
+                            Tell us your name and choose a name for your AI
+                            assistant.
                         </div>
                         <div id="wizard-error" class="error-msg"></div>
-                        <div class="provider-grid">
-                            <div
-                                class="provider-card selected"
-                                data-provider="openrouter"
-                                onclick="selectProvider(this)"
-                            >
-                                <div class="p-name">OpenRouter</div>
-                                <div class="p-desc">50+ models, one key</div>
-                            </div>
-                            <div
-                                class="provider-card"
-                                data-provider="anthropic"
-                                onclick="selectProvider(this)"
-                            >
-                                <div class="p-name">Anthropic</div>
-                                <div class="p-desc">Claude models direct</div>
-                            </div>
-                            <div
-                                class="provider-card"
-                                data-provider="openai"
-                                onclick="selectProvider(this)"
-                            >
-                                <div class="p-name">OpenAI</div>
-                                <div class="p-desc">GPT models direct</div>
-                            </div>
-                            <div
-                                class="provider-card"
-                                data-provider="ollama"
-                                onclick="selectProvider(this)"
-                            >
-                                <div class="p-name">Ollama</div>
-                                <div class="p-desc">
-                                    Local AI, no key needed
-                                </div>
-                            </div>
+                        <div class="field-group">
+                            <label class="field-label">Your Name</label>
+                            <input
+                                type="text"
+                                id="user-name-input"
+                                placeholder="Enter your name"
+                                autocomplete="off"
+                            />
                         </div>
-                        <div class="provider-other">
-                            Other provider?
-                            <a onclick="showAllProviders()"
-                                >Show all options →</a
-                            >
+                        <div class="field-group">
+                            <label class="field-label">Agent Name</label>
+                            <input
+                                type="text"
+                                id="agent-name-input"
+                                placeholder="Give your AI assistant a name"
+                                autocomplete="off"
+                            />
                         </div>
-                        <div
-                            id="all-providers-wrap"
-                            style="margin-top: 12px; display: none"
-                        >
-                            <label class="field-label">Provider</label>
-                            <select id="provider-select"></select>
-                        </div>
+
                         <div class="wizard-actions" style="margin-top: 20px">
                             <button class="btn btn-primary" onclick="goStep(1)">
                                 Continue →
@@ -1647,11 +1618,11 @@
                     <!-- Step 1: API Key -->
                     <div class="wizard-step" id="step-1">
                         <div class="step-title" id="apikey-title">
-                            Enter your API key
+                            Enter your Anthropic API key
                         </div>
                         <div class="step-desc" id="apikey-desc">
                             Your API key is stored locally and never sent
-                            anywhere except directly to your chosen provider.
+                            anywhere except directly to Anthropic.
                         </div>
                         <div id="wizard-error-1" class="error-msg"></div>
                         <div class="field-group" id="apikey-field">
@@ -1663,30 +1634,13 @@
                                 autocomplete="off"
                             />
                             <div class="field-hint" id="apikey-hint">
-                                Get your key from the provider's dashboard.
+                                Get your key at console.anthropic.com
                             </div>
-                        </div>
-                        <div class="field-group">
-                            <label class="field-label"
-                                >Model
-                                <span
-                                    style="
-                                        color: var(--text2);
-                                        font-weight: 400;
-                                        text-transform: none;
-                                    "
-                                    >(optional)</span
-                                ></label
-                            >
-                            <input
-                                type="text"
-                                id="model-input"
-                                placeholder="Leave blank to use the default model"
-                            />
                         </div>
                         <div class="wizard-actions">
                             <button
                                 class="btn btn-secondary"
+                                id="back-btn"
                                 onclick="goStep(0)"
                             >
                                 ← Back
@@ -1735,7 +1689,9 @@
         <div id="app-shell" class="screen">
             <!-- Sidebar -->
             <div class="sidebar">
-                <div class="sidebar-logo">KrustyKlaw</div>
+                <div class="sidebar-logo" id="sidebar-agent-name">
+                    KrustyKlaw
+                </div>
                 <div class="sidebar-section">Main</div>
                 <div
                     class="nav-item active"
@@ -1862,7 +1818,7 @@
                     >
                         <div class="welcome-msg" id="welcome-msg">
                             <div class="big">Hello 👋</div>
-                            <div class="sub">
+                            <div class="sub" id="welcome-sub">
                                 I'm KrustyKlaw, your AI assistant. Ask me
                                 anything — I can help with code, writing,
                                 research, analysis, and more.
@@ -1874,9 +1830,10 @@
                             <textarea
                                 id="chat-input"
                                 rows="1"
-                                placeholder="Message KrustyKlaw"
+                                placeholder="Message KrustyKlaw…"
                                 onkeydown="handleKey(event)"
                                 oninput="autoResize(this)"
+                                data-default-placeholder="Message KrustyKlaw…"
                             ></textarea>
                             <button
                                 class="send-btn"
@@ -2482,10 +2439,9 @@
         <script>
             // State
             let currentStep = 0;
-            let selectedProvider = "openrouter";
+            let isFirstTime = false;
             let history = [];
             let isLoading = false;
-            let providersList = [];
             let researchDocs = JSON.parse(
                 localStorage.getItem("nullclaw_research_docs") || "[]",
             );
@@ -2498,43 +2454,43 @@
 
             // Init
             async function init() {
+                const stepTitle = document.getElementById("step-0-title");
+                const stepDesc = document.getElementById("step-0-desc");
+                if (stepTitle)
+                    stepTitle.textContent =
+                        "Welcome! Let's get to know each other";
+                if (stepDesc)
+                    stepDesc.textContent =
+                        "Tell us your name and choose a name for your AI assistant.";
                 try {
                     const r = await fetch("/api/status");
                     const data = await r.json();
                     if (data.configured) {
+                        isFirstTime = false;
                         const model = data.model || data.provider || "";
                         document.getElementById(
                             "sidebar-model-label",
                         ).textContent = model;
+                        if (data.user_name)
+                            document.getElementById("user-name-input").value =
+                                data.user_name;
+                        if (data.agent_name)
+                            document.getElementById("agent-name-input").value =
+                                data.agent_name;
+                        if (data.agent_name) updateAgentNameUI(data.agent_name);
                         showScreen("app-shell");
                     } else {
-                        await loadProviders();
+                        isFirstTime = true;
                         showScreen("setup");
                     }
                 } catch (e) {
-                    await loadProviders();
+                    isFirstTime = true;
                     showScreen("setup");
                 }
                 loadGmailStatus();
                 renderDocList();
                 renderTaskList();
                 initSchedulerListeners();
-            }
-
-            async function loadProviders() {
-                try {
-                    const r = await fetch("/api/providers");
-                    const data = await r.json();
-                    providersList = data.providers || [];
-                    const sel = document.getElementById("provider-select");
-                    sel.innerHTML = "";
-                    for (const p of providersList) {
-                        const opt = document.createElement("option");
-                        opt.value = p.key;
-                        opt.textContent = p.label;
-                        sel.appendChild(opt);
-                    }
-                } catch (e) {}
             }
 
             // Screen management
@@ -2557,27 +2513,31 @@
             }
 
             // Setup
-            function selectProvider(card) {
-                document
-                    .querySelectorAll(".provider-card")
-                    .forEach((c) => c.classList.remove("selected"));
-                card.classList.add("selected");
-                selectedProvider = card.dataset.provider;
-            }
-
-            function showAllProviders() {
-                document.getElementById("all-providers-wrap").style.display =
-                    "block";
-                const sel = document.getElementById("provider-select");
-                sel.onchange = () => {
-                    selectedProvider = sel.value;
-                };
-            }
 
             function goStep(n) {
                 document.getElementById("wizard-error").style.display = "none";
                 document.getElementById("wizard-error-1").style.display =
                     "none";
+                if (currentStep === 0 && n === 1) {
+                    const userName = document
+                        .getElementById("user-name-input")
+                        .value.trim();
+                    const agentName = document
+                        .getElementById("agent-name-input")
+                        .value.trim();
+                    if (!userName) {
+                        const err = document.getElementById("wizard-error");
+                        err.textContent = "Please enter your name.";
+                        err.style.display = "block";
+                        return;
+                    }
+                    if (!agentName) {
+                        const err = document.getElementById("wizard-error");
+                        err.textContent = "Please enter a name for your agent.";
+                        err.style.display = "block";
+                        return;
+                    }
+                }
                 document
                     .querySelectorAll(".wizard-step")
                     .forEach((s) => s.classList.remove("active"));
@@ -2591,76 +2551,41 @@
                 if (n === 1) updateApiKeyStep();
             }
 
-            function getEffectiveProvider() {
-                const wrap = document.getElementById("all-providers-wrap");
-                if (wrap.style.display !== "none")
-                    return document.getElementById("provider-select").value;
-                return selectedProvider;
-            }
-
             function updateApiKeyStep() {
-                const p = getEffectiveProvider();
-                const noKey = [
-                    "ollama",
-                    "lm-studio",
-                    "lmstudio",
-                    "claude-cli",
-                    "codex-cli",
-                    "gemini-cli",
-                    "openai-codex",
-                ];
-                const needsKey = !noKey.includes(p);
                 const field = document.getElementById("apikey-field");
                 const title = document.getElementById("apikey-title");
                 const desc = document.getElementById("apikey-desc");
-                const input = document.getElementById("api-key-input");
-                if (!needsKey) {
-                    field.style.display = "none";
-                    title.textContent = "Configure " + p;
+                if (isFirstTime) {
+                    field.style.display = "block";
+                    title.textContent = "Enter your Anthropic API key";
                     desc.textContent =
-                        "No API key needed for " +
-                        p +
-                        ". Click Set Up to continue.";
-                    input.value = "";
+                        "Your key is stored locally and sent only to Anthropic. You can add other providers later.";
+                    document.getElementById("apikey-hint").textContent =
+                        "Get your key at console.anthropic.com";
                 } else {
                     field.style.display = "block";
-                    title.textContent = "Enter your API key";
+                    title.textContent = "Enter your Anthropic API key";
                     desc.textContent =
-                        "Your key is stored locally and sent only to the provider.";
-                    const hints = {
-                        openrouter: "Get your key at openrouter.ai/keys",
-                        anthropic: "Get your key at console.anthropic.com",
-                        openai: "Get your key at platform.openai.com/api-keys",
-                        gemini: "Get your key at aistudio.google.com",
-                        deepseek: "Get your key at platform.deepseek.com",
-                        groq: "Get your key at console.groq.com/keys",
-                    };
+                        "Your key is stored locally and sent only to Anthropic.";
                     document.getElementById("apikey-hint").textContent =
-                        hints[p] || "Get your key from the provider dashboard.";
+                        "Get your key at console.anthropic.com";
                 }
             }
 
             async function doSetup() {
                 const btn = document.getElementById("setup-btn");
                 const errEl = document.getElementById("wizard-error-1");
-                const p = getEffectiveProvider();
-                const noKey = [
-                    "ollama",
-                    "lm-studio",
-                    "lmstudio",
-                    "claude-cli",
-                    "codex-cli",
-                    "gemini-cli",
-                    "openai-codex",
-                ];
                 const apiKey = document
                     .getElementById("api-key-input")
                     .value.trim();
-                const model = document
-                    .getElementById("model-input")
+                const userName = document
+                    .getElementById("user-name-input")
                     .value.trim();
-                if (!noKey.includes(p) && !apiKey) {
-                    errEl.textContent = "Please enter your API key.";
+                const agentName = document
+                    .getElementById("agent-name-input")
+                    .value.trim();
+                if (!apiKey) {
+                    errEl.textContent = "Please enter your Anthropic API key.";
                     errEl.style.display = "block";
                     return;
                 }
@@ -2668,9 +2593,9 @@
                 btn.textContent = "Setting up…";
                 errEl.style.display = "none";
                 try {
-                    const body = { provider: p };
-                    if (apiKey) body.api_key = apiKey;
-                    if (model) body.model = model;
+                    const body = { provider: "anthropic", api_key: apiKey };
+                    if (userName) body.user_name = userName;
+                    if (agentName) body.agent_name = agentName;
                     const r = await fetch("/api/setup", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -2681,6 +2606,14 @@
                         errEl.textContent = data.error;
                         errEl.style.display = "block";
                     } else {
+                        isFirstTime = false;
+                        if (agentName) updateAgentNameUI(agentName);
+                        const model =
+                            data.model || data.provider || "anthropic";
+                        const modelLabel = document.getElementById(
+                            "sidebar-model-label",
+                        );
+                        if (modelLabel) modelLabel.textContent = model;
                         goStep(2);
                     }
                 } catch (e) {
@@ -2692,6 +2625,23 @@
                 }
             }
 
+            function updateAgentNameUI(name) {
+                const displayName =
+                    name && name.trim() ? name.trim() : "KrustyKlaw";
+                document.title = displayName + " — KrustyKlaw";
+                const sidebarName =
+                    document.getElementById("sidebar-agent-name");
+                if (sidebarName) sidebarName.textContent = displayName;
+                const sub = document.getElementById("welcome-sub");
+                if (sub)
+                    sub.textContent =
+                        "I'm " +
+                        displayName +
+                        ", your AI assistant. Ask me anything — I can help with code, writing, research, analysis, and more.";
+                const input = document.getElementById("chat-input");
+                if (input) input.placeholder = "Message " + displayName + "…";
+            }
+
             function startChat() {
                 history = [];
                 showScreen("app-shell");
@@ -2700,19 +2650,33 @@
             }
 
             function goToSetup() {
+                isFirstTime = false;
+                const apiInput = document.getElementById("api-key-input");
+                if (apiInput) apiInput.value = "";
+                const err = document.getElementById("wizard-error-1");
+                if (err) err.style.display = "none";
+                document.getElementById("step-0-title").textContent =
+                    "Update your settings";
+                document.getElementById("step-0-desc").textContent =
+                    "Update your name or agent name, then re-enter your Anthropic API key.";
                 showScreen("setup");
                 goStep(0);
-                loadProviders();
             }
 
             // Chat
             function newConversation() {
                 history = [];
                 const msgs = document.getElementById("messages");
+                const sidebarName =
+                    document.getElementById("sidebar-agent-name");
+                const displayName =
+                    sidebarName && sidebarName.textContent
+                        ? sidebarName.textContent.trim()
+                        : "KrustyKlaw";
                 msgs.innerHTML = `<div class="welcome-msg" id="welcome-msg">
-    <div class="big">Hello 👋</div>
-    <div class="sub">Starting a fresh conversation. What can I help you with?</div>
-  </div>`;
+                <div class="big">Hello 👋</div>
+                <div class="sub" id="welcome-sub">I'm ${displayName}, your AI assistant. Ask me anything — I can help with code, writing, research, analysis, and more.</div>
+              </div>`;
                 document.getElementById("chat-input").focus();
             }
 
@@ -2745,9 +2709,9 @@
                 const typingId = "typing-" + Date.now();
                 const msgs = document.getElementById("messages");
                 msgs.innerHTML += `<div class="message ai" id="${typingId}">
-    <div class="avatar">N</div>
-    <div class="typing"><span></span><span></span><span></span></div>
-  </div>`;
+                <div class="avatar">N</div>
+                <div class="typing"><span></span><span></span><span></span></div>
+              </div>`;
                 scrollToBottom();
                 isLoading = true;
                 document.getElementById("send-btn").disabled = true;
@@ -2953,10 +2917,10 @@
                 list.innerHTML = researchDocs
                     .map(
                         (d, i) => `
-    <div class="doc-item${currentDocId === d.id ? " active" : ""}" onclick="openDoc('${d.id}')">
-      <div class="doc-title">${escHtml(d.title)}</div>
-      <div class="doc-date">${new Date(d.createdAt).toLocaleDateString()}</div>
-    </div>`,
+                <div class="doc-item${currentDocId === d.id ? " active" : ""}" onclick="openDoc('${d.id}')">
+                  <div class="doc-title">${escHtml(d.title)}</div>
+                  <div class="doc-date">${new Date(d.createdAt).toLocaleDateString()}</div>
+                </div>`,
                     )
                     .join("");
             }
@@ -2968,10 +2932,10 @@
                 renderDocList();
                 document.getElementById("doc-viewer").innerHTML =
                     `<div class="md-doc">
-    <h1>${escHtml(doc.title)}</h1>
-    <div class="doc-meta">Generated ${new Date(doc.createdAt).toLocaleString()} · AI-compiled research document</div>
-    ${renderMdDoc(doc.content)}
-  </div>`;
+                <h1>${escHtml(doc.title)}</h1>
+                <div class="doc-meta">Generated ${new Date(doc.createdAt).toLocaleString()} · AI-compiled research document</div>
+                ${renderMdDoc(doc.content)}
+              </div>`;
             }
 
             function newResearchDoc() {
@@ -2988,14 +2952,14 @@
             function buildResearchPrompt(topic) {
                 return `You are a research assistant with access to web search and other tools. Research the following topic thoroughly and produce a well-structured Markdown document.
 
-Topic: ${topic}
+            Topic: ${topic}
 
-Instructions:
-1. Use your web_search tool to find current, authoritative sources. Run multiple targeted queries.
-2. Start the document with a "## Research Process" section that lists the exact queries you ran and the key sources you found (title + URL). This is important — the user wants to see your actual research steps, not a summary.
-3. Then write the main document with these sections: Executive Summary, Background & Context, Key Findings, Current State of the Art, Challenges & Open Questions, Practical Applications, References.
-4. Cite sources inline using Markdown links: [Source Name](url).
-5. Output ONLY the Markdown document. No preamble, no "here is your document" framing.`;
+            Instructions:
+            1. Use your web_search tool to find current, authoritative sources. Run multiple targeted queries.
+            2. Start the document with a "## Research Process" section that lists the exact queries you ran and the key sources you found (title + URL). This is important — the user wants to see your actual research steps, not a summary.
+            3. Then write the main document with these sections: Executive Summary, Background & Context, Key Findings, Current State of the Art, Challenges & Open Questions, Practical Applications, References.
+            4. Cite sources inline using Markdown links: [Source Name](url).
+            5. Output ONLY the Markdown document. No preamble, no "here is your document" framing.`;
             }
 
             async function startResearch() {
@@ -3151,19 +3115,19 @@ Instructions:
                 list.innerHTML = scheduledTasks
                     .map(
                         (t) => `
-    <div class="task-row">
-      <span class="task-icon">${actionEmoji(t.action)}</span>
-      <div class="task-info">
-        <div class="task-name">${escHtml(t.name)}</div>
-        <div class="task-meta">${intervalLabel(t.interval)} · ${t.action}</div>
-      </div>
-      <div class="task-toggle">
-        <label class="toggle-switch">
-          <input type="checkbox" ${t.enabled ? "checked" : ""} onchange="toggleTask('${t.id}',this.checked)">
-          <span class="toggle-track"></span>
-        </label>
-      </div>
-    </div>`,
+                <div class="task-row">
+                  <span class="task-icon">${actionEmoji(t.action)}</span>
+                  <div class="task-info">
+                    <div class="task-name">${escHtml(t.name)}</div>
+                    <div class="task-meta">${intervalLabel(t.interval)} · ${t.action}</div>
+                  </div>
+                  <div class="task-toggle">
+                    <label class="toggle-switch">
+                      <input type="checkbox" ${t.enabled ? "checked" : ""} onchange="toggleTask('${t.id}',this.checked)">
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+                </div>`,
                     )
                     .join("");
             }
@@ -3203,11 +3167,11 @@ Instructions:
                 list.innerHTML = taskSources
                     .map(
                         (s, i) => `
-    <div class="source-chip">
-      <span class="sc-icon">📄</span>
-      <span class="sc-path">${escHtml(s)}</span>
-      <span class="sc-remove" onclick="removeSource(${i})">✕</span>
-    </div>`,
+                <div class="source-chip">
+                  <span class="sc-icon">📄</span>
+                  <span class="sc-path">${escHtml(s)}</span>
+                  <span class="sc-remove" onclick="removeSource(${i})">✕</span>
+                </div>`,
                     )
                     .join("");
             }
