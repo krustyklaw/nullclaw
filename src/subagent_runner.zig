@@ -116,7 +116,7 @@ pub fn runTaskWithTools(
     const effective_model = request.default_model orelse "anthropic/claude-sonnet-4";
     var cfg = config_mod.Config{
         .workspace_dir = request.workspace_dir,
-        .config_path = "/tmp/nullclaw-subagent.json",
+        .config_path = "/tmp/krustyklaw-subagent.json",
         .allocator = allocator,
         .default_provider = request.default_provider,
         .default_model = effective_model,

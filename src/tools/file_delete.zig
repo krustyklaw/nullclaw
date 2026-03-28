@@ -150,7 +150,7 @@ test "file_delete removes sqlite bootstrap and marks onboarding complete" {
     try std.testing.expectEqualStrings("Deleted BOOTSTRAP.md", result.output);
     try std.testing.expect(!provider.exists("BOOTSTRAP.md"));
 
-    const state_path = try std.fs.path.join(std.testing.allocator, &.{ ws_path, ".nullclaw", "workspace-state.json" });
+    const state_path = try std.fs.path.join(std.testing.allocator, &.{ ws_path, ".krustyklaw", "workspace-state.json" });
     defer std.testing.allocator.free(state_path);
     const file = try std.fs.openFileAbsolute(state_path, .{});
     defer file.close();

@@ -3656,7 +3656,7 @@ test "processMessage bare /new persists fresh-session turn across reload" {
 }
 
 test "processMessage bare /reset with mention persists fresh-session turn across reload" {
-    try expectResetTurnPersistsFreshSession("/reset@nullclaw_bot:");
+    try expectResetTurnPersistsFreshSession("/reset@krustyklaw_bot:");
 }
 
 test "processMessage slash-prefixed prompt that is not a local command persists across reload" {

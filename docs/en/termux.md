@@ -1,12 +1,12 @@
 # Termux Guide
 
-This guide covers the practical Android / Termux path for NullClaw.
+This guide covers the practical Android / Termux path for KrustyKlaw.
 
 ## Page Guide
 
 **Who this page is for**
 
-- Android users running NullClaw directly inside Termux
+- Android users running KrustyKlaw directly inside Termux
 - Contributors documenting or troubleshooting mobile installs
 - Operators deciding whether Termux is good enough for their workload
 
@@ -29,7 +29,7 @@ Termux is a weaker fit for:
 - long-running heavy inference on the phone itself
 - service-style background operation that must survive Android process pressure
 
-If Android kills the process under memory pressure, that is an Android / Termux constraint, not necessarily a NullClaw bug.
+If Android kills the process under memory pressure, that is an Android / Termux constraint, not necessarily a KrustyKlaw bug.
 
 ## Prerequisites
 
@@ -50,11 +50,11 @@ The output must be `0.15.2`.
 ```bash
 pkg update
 pkg install git zig
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig version
 zig build -Doptimize=ReleaseSmall
-./zig-out/bin/nullclaw --help
+./zig-out/bin/krustyklaw --help
 ```
 
 Notes:
@@ -89,7 +89,7 @@ If you see an error like:
 build.zig.zon:2:14: error: expected string literal
 ```
 
-the usual cause is the wrong Zig version, not the NullClaw source tree.
+the usual cause is the wrong Zig version, not the KrustyKlaw source tree.
 
 Checklist:
 
@@ -104,8 +104,8 @@ Do not patch `build.zig.zon` locally to work around an older Zig build. The proj
 Once the binary builds, verify the two simplest entry points first:
 
 ```bash
-./zig-out/bin/nullclaw agent
-./zig-out/bin/nullclaw gateway --host 127.0.0.1 --port 3001
+./zig-out/bin/krustyklaw agent
+./zig-out/bin/krustyklaw gateway --host 127.0.0.1 --port 3001
 ```
 
 Start with foreground runs before trying wrappers, launchers, or background automation.

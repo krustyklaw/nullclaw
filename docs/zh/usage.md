@@ -13,44 +13,44 @@
 1. 执行初始化：
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 2. 发送一条测试消息：
 
 ```bash
-nullclaw agent -m "你好，nullclaw"
+krustyklaw agent -m "你好，krustyklaw"
 ```
 
 3. 启动长期运行网关：
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 ```
 
 ## 常用命令速查
 
 | 命令 | 用途 |
 |---|---|
-| `nullclaw onboard --api-key sk-... --provider openrouter` | 快速写入 provider 与 API Key |
-| `nullclaw onboard --interactive` | 交互式完整初始化 |
-| `nullclaw onboard --channels-only` | 只重配 channel / allowlist |
-| `nullclaw agent -m "..."` | 单条消息模式 |
-| `nullclaw agent` | 交互会话模式 |
-| `nullclaw gateway` | 启动长期运行 runtime（默认 `127.0.0.1:3000`） |
-| `nullclaw service install` | 安装后台服务 |
-| `nullclaw service start` | 启动后台服务 |
-| `nullclaw service status` | 查看后台服务状态 |
-| `nullclaw service stop` | 停止后台服务 |
-| `nullclaw service uninstall` | 卸载后台服务 |
-| `nullclaw doctor` | 系统诊断 |
-| `nullclaw status` | 全局状态 |
-| `nullclaw channel status` | 渠道健康状态 |
-| `nullclaw channel start telegram` | 启动指定渠道 |
-| `nullclaw migrate openclaw --dry-run` | 预演迁移 OpenClaw 数据 |
-| `nullclaw migrate openclaw` | 执行迁移 |
-| `nullclaw history list [--limit N] [--offset N] [--json]` | 列出会话记录 |
-| `nullclaw history show <session_id> [--limit N] [--offset N] [--json]` | 查看指定会话的消息详情 |
+| `krustyklaw onboard --api-key sk-... --provider openrouter` | 快速写入 provider 与 API Key |
+| `krustyklaw onboard --interactive` | 交互式完整初始化 |
+| `krustyklaw onboard --channels-only` | 只重配 channel / allowlist |
+| `krustyklaw agent -m "..."` | 单条消息模式 |
+| `krustyklaw agent` | 交互会话模式 |
+| `krustyklaw gateway` | 启动长期运行 runtime（默认 `127.0.0.1:3000`） |
+| `krustyklaw service install` | 安装后台服务 |
+| `krustyklaw service start` | 启动后台服务 |
+| `krustyklaw service status` | 查看后台服务状态 |
+| `krustyklaw service stop` | 停止后台服务 |
+| `krustyklaw service uninstall` | 卸载后台服务 |
+| `krustyklaw doctor` | 系统诊断 |
+| `krustyklaw status` | 全局状态 |
+| `krustyklaw channel status` | 渠道健康状态 |
+| `krustyklaw channel start telegram` | 启动指定渠道 |
+| `krustyklaw migrate openclaw --dry-run` | 预演迁移 OpenClaw 数据 |
+| `krustyklaw migrate openclaw` | 执行迁移 |
+| `krustyklaw history list [--limit N] [--offset N] [--json]` | 列出会话记录 |
+| `krustyklaw history show <session_id> [--limit N] [--offset N] [--json]` | 查看指定会话的消息详情 |
 
 ## 服务化运行建议
 
@@ -59,19 +59,19 @@ nullclaw gateway
 - macOS 走 `launchctl`。
 - Linux 环境会优先使用 `systemd --user`，在 Alpine / OpenRC 系统上会自动切换为 OpenRC。
 - Windows 走 Service Control Manager。
-- 如果 Linux 上既没有可用的 `systemd --user`，也缺少必需的 OpenRC 命令，这组子命令会失败；此时应改用前台 `nullclaw gateway` 或其他外部 supervisor。
+- 如果 Linux 上既没有可用的 `systemd --user`，也缺少必需的 OpenRC 命令，这组子命令会失败；此时应改用前台 `krustyklaw gateway` 或其他外部 supervisor。
 
 ```bash
-nullclaw service install
-nullclaw service start
-nullclaw service status
+krustyklaw service install
+krustyklaw service start
+krustyklaw service status
 ```
 
 如果配置改动较大，建议重启服务：
 
 ```bash
-nullclaw service stop
-nullclaw service start
+krustyklaw service stop
+krustyklaw service start
 ```
 
 ## 网关与配对（Pairing）
@@ -93,7 +93,7 @@ curl http://127.0.0.1:3000/health
 
 处理步骤：
 
-1. 先跑 `nullclaw doctor` 看具体报错。
+1. 先跑 `krustyklaw doctor` 看具体报错。
 2. 对照 `config.example.json` 检查字段拼写与层级。
 3. 检查 JSON 语法（逗号、引号、括号）。
 
@@ -108,13 +108,13 @@ curl http://127.0.0.1:3000/health
 建议排查：
 
 ```bash
-nullclaw status
+krustyklaw status
 ```
 
 并重新执行：
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 ### 3) 收不到渠道消息
@@ -123,7 +123,7 @@ nullclaw onboard --interactive
 
 - `channels.<name>.accounts.*` 的 token / webhook / account 字段是否正确。
 - `allow_from` 是否误设为空数组。
-- `nullclaw channel status` 是否有 unhealthy 标记。
+- `krustyklaw channel status` 是否有 unhealthy 标记。
 - 如果是 DingTalk，进一步看
   [DingTalk 运维就绪](./ops/dingtalk-ops-readiness.md)。
 
@@ -145,9 +145,9 @@ nullclaw onboard --interactive
 
 建议排查：
 
-- 前台运行时先用 `nullclaw agent --verbose`。
-- service 模式下查看 `~/.nullclaw/logs/daemon.stdout.log` 与 `~/.nullclaw/logs/daemon.stderr.log`。
-- 跑一次 `nullclaw status`，确认当前实际使用的 provider / model。
+- 前台运行时先用 `krustyklaw agent --verbose`。
+- service 模式下查看 `~/.krustyklaw/logs/daemon.stdout.log` 与 `~/.krustyklaw/logs/daemon.stderr.log`。
+- 跑一次 `krustyklaw status`，确认当前实际使用的 provider / model。
 
 如果 plan 本身可用但限流很严，建议保守调整 reliability：
 
@@ -161,23 +161,23 @@ nullclaw onboard --interactive
 }
 ```
 
-如果同一 provider 有多把 key，可以配置 `reliability.api_keys` 让 NullClaw 在限流时轮转。
+如果同一 provider 有多把 key，可以配置 `reliability.api_keys` 让 KrustyKlaw 在限流时轮转。
 
 ## 变更后回归检查清单
 
 每次改配置后，建议按顺序执行：
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
-nullclaw agent -m "self-check"
+krustyklaw doctor
+krustyklaw status
+krustyklaw channel status
+krustyklaw agent -m "self-check"
 ```
 
 对 gateway 场景，额外验证：
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 curl http://127.0.0.1:3000/health
 ```
 

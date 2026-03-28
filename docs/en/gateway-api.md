@@ -113,17 +113,17 @@ curl -X POST \
 
 Max webhook notes:
 
-- `nullclaw` routes `/max` to the configured Max account by `account_id` query first, then by `X-Max-Bot-Api-Secret`.
+- `krustyklaw` routes `/max` to the configured Max account by `account_id` query first, then by `X-Max-Bot-Api-Secret`.
 - If `channels.max[].webhook_secret` is configured, the header is required and must match exactly.
 - Use HTTPS in the configured Max-side webhook URL.
 
 ## A2A (Agent-to-Agent Protocol)
 
-NullClaw implements [Google's A2A protocol v0.3.0](https://github.com/google/A2A) over JSON-RPC 2.0, enabling interoperability with any A2A-compatible agent or client.
+KrustyKlaw implements [Google's A2A protocol v0.3.0](https://github.com/google/A2A) over JSON-RPC 2.0, enabling interoperability with any A2A-compatible agent or client.
 
 ### Configuration
 
-Add to `~/.nullclaw/config.json`:
+Add to `~/.krustyklaw/config.json`:
 
 ```json
 {
@@ -140,7 +140,7 @@ Add to `~/.nullclaw/config.json`:
 | Field | Default | Description |
 |-------|---------|-------------|
 | `enabled` | `false` | Enable A2A endpoints |
-| `name` | `"NullClaw"` | Agent name in the Agent Card |
+| `name` | `"KrustyKlaw"` | Agent name in the Agent Card |
 | `description` | `"AI assistant"` | Agent description |
 | `url` | `""` | Public URL (used in Agent Card and `supportedInterfaces`) |
 | `version` | `"1.0.0"` | Agent version string |
@@ -195,7 +195,7 @@ curl -X POST \
       "message": {
         "messageId": "msg-1",
         "role": "user",
-        "parts": [{"kind": "text", "text": "What is nullclaw?"}]
+        "parts": [{"kind": "text", "text": "What is krustyklaw?"}]
       }
     }
   }' \

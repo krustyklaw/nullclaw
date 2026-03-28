@@ -451,7 +451,7 @@ pub const OtelObserver = struct {
         return .{
             .allocator = allocator,
             .endpoint = endpoint orelse "http://localhost:4318",
-            .service_name = service_name orelse "nullclaw",
+            .service_name = service_name orelse "krustyklaw",
             .headers = &.{},
             .spans = .empty,
             .trace_contexts = .{},
@@ -975,7 +975,7 @@ pub const RuntimeObserver = struct {
             self.owned_file_path = if (config.file_path) |path|
                 try self.allocator.dupe(u8, path)
             else
-                try std.fmt.allocPrint(self.allocator, "{s}/nullclaw-observability.jsonl", .{config.workspace_dir});
+                try std.fmt.allocPrint(self.allocator, "{s}/krustyklaw-observability.jsonl", .{config.workspace_dir});
             self.file = .{ .path = self.owned_file_path.? };
             self.primary_backend = .file;
         } else if (std.mem.eql(u8, backend, "otel")) {
@@ -1127,13 +1127,13 @@ test "createObserver factory" {
 }
 
 test "FileObserver name" {
-    var file_obs = FileObserver{ .path = "/tmp/nullclaw_test_obs.jsonl" };
+    var file_obs = FileObserver{ .path = "/tmp/krustyklaw_test_obs.jsonl" };
     const obs = file_obs.observer();
     try std.testing.expectEqualStrings("file", obs.getName());
 }
 
 test "FileObserver does not panic on events" {
-    var file_obs = FileObserver{ .path = "/tmp/nullclaw_test_obs.jsonl" };
+    var file_obs = FileObserver{ .path = "/tmp/krustyklaw_test_obs.jsonl" };
     const obs = file_obs.observer();
     const event = ObserverEvent{ .heartbeat_tick = {} };
     obs.recordEvent(&event);
@@ -1143,7 +1143,7 @@ test "FileObserver does not panic on events" {
 }
 
 test "FileObserver handles all event types" {
-    var file_obs = FileObserver{ .path = "/tmp/nullclaw_test_obs2.jsonl" };
+    var file_obs = FileObserver{ .path = "/tmp/krustyklaw_test_obs2.jsonl" };
     const obs = file_obs.observer();
     const events = [_]ObserverEvent{
         .{ .agent_start = .{ .provider = "test", .model = "test" } },
@@ -1478,7 +1478,7 @@ test "Observer interface dispatches correctly" {
     var noop = NoopObserver{};
     var log_obs = LogObserver{};
     var verbose = VerboseObserver{};
-    var file_obs = FileObserver{ .path = "/tmp/nullclaw_dispatch_test.jsonl" };
+    var file_obs = FileObserver{ .path = "/tmp/krustyklaw_dispatch_test.jsonl" };
 
     const observers = [_]Observer{ noop.observer(), log_obs.observer(), verbose.observer(), file_obs.observer() };
     const expected_names = [_][]const u8{ "noop", "log", "verbose", "file" };
@@ -1501,7 +1501,7 @@ test "OtelObserver init defaults" {
     var otel = OtelObserver.init(std.testing.allocator, null, null);
     defer otel.deinit();
     try std.testing.expectEqualStrings("http://localhost:4318", otel.endpoint);
-    try std.testing.expectEqualStrings("nullclaw", otel.service_name);
+    try std.testing.expectEqualStrings("krustyklaw", otel.service_name);
     try std.testing.expectEqual(@as(usize, 0), otel.spans.items.len);
 }
 
@@ -1515,14 +1515,14 @@ test "OtelObserver init custom endpoint" {
 test "OtelObserver initWithHeaders builds curl headers" {
     const headers = [_]OtelObserver.HeaderEntry{
         .{ .key = "Authorization", .value = "Bearer secret" },
-        .{ .key = "x-nullwatch-source", .value = "nullclaw" },
+        .{ .key = "x-nullwatch-source", .value = "krustyklaw" },
     };
     var otel = try OtelObserver.initWithHeaders(std.testing.allocator, null, null, &headers);
     defer otel.deinit();
 
     try std.testing.expectEqual(@as(usize, 2), otel.headers.len);
     try std.testing.expectEqualStrings("Authorization: Bearer secret", otel.headers[0]);
-    try std.testing.expectEqualStrings("x-nullwatch-source: nullclaw", otel.headers[1]);
+    try std.testing.expectEqualStrings("x-nullwatch-source: krustyklaw", otel.headers[1]);
 }
 
 test "RuntimeObserver combines configured backend with extra observers" {
@@ -1535,7 +1535,7 @@ test "RuntimeObserver combines configured backend with extra observers" {
         .{
             .workspace_dir = "/tmp",
             .backend = "otel",
-            .otel_service_name = "nullclaw",
+            .otel_service_name = "krustyklaw",
         },
         &headers,
         &.{extra.observer()},

@@ -140,7 +140,7 @@ pub const DelegateTool = struct {
 
         // Fallback: no agent config found — load global config
         var cfg = Config.load(allocator) catch {
-            return ToolResult.fail("Failed to load config — run `nullclaw onboard` first");
+            return ToolResult.fail("Failed to load config — run `krustyklaw onboard` first");
         };
         defer cfg.deinit();
 
@@ -595,7 +595,7 @@ test "delegate uses configured provider entry for key and base_url" {
     test_expected_api_key = "ollama-key";
     test_expected_base_url = "http://192.168.1.12:11434";
     test_expected_native_tools = false;
-    test_expected_user_agent = "nullclaw-test";
+    test_expected_user_agent = "krustyklaw-test";
     test_expected_api_mode = .responses;
     test_expected_chat_template_enable_thinking_param = true;
     test_expected_model_name = "qwen3.5:cloud";
@@ -628,7 +628,7 @@ test "delegate uses configured provider entry for key and base_url" {
             .api_key = "ollama-key",
             .base_url = "http://192.168.1.12:11434",
             .native_tools = false,
-            .user_agent = "nullclaw-test",
+            .user_agent = "krustyklaw-test",
             .api_mode = .responses,
             .chat_template_enable_thinking_param = true,
         },

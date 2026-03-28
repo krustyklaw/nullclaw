@@ -1,6 +1,6 @@
-# Contributing to NullClaw
+# Contributing to KrustyKlaw
 
-Thanks for contributing to NullClaw.
+Thanks for contributing to KrustyKlaw.
 
 This guide focuses on the fastest safe path to open a useful PR without guessing about local setup, validation, or documentation expectations.
 
@@ -27,8 +27,8 @@ Expected output:
 Clone and build:
 
 ```bash
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig build
 ```
 

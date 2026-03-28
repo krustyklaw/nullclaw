@@ -63,14 +63,14 @@ pub fn freeMutationResult(allocator: std.mem.Allocator, result: *MutationResult)
     if (result.backup_path) |p| allocator.free(p);
 }
 
-fn defaultConfigDir(allocator: std.mem.Allocator, nullclaw_home_override: ?[]const u8) ![]u8 {
-    if (nullclaw_home_override) |config_dir| {
+fn defaultConfigDir(allocator: std.mem.Allocator, krustyklaw_home_override: ?[]const u8) ![]u8 {
+    if (krustyklaw_home_override) |config_dir| {
         return allocator.dupe(u8, config_dir);
     }
 
     const home = try platform.getHomeDir(allocator);
     defer allocator.free(home);
-    return try std.fs.path.join(allocator, &.{ home, ".nullclaw" });
+    return try std.fs.path.join(allocator, &.{ home, ".krustyklaw" });
 }
 
 fn defaultConfigPathFromDir(allocator: std.mem.Allocator, config_dir: []const u8) ![]u8 {
@@ -78,13 +78,13 @@ fn defaultConfigPathFromDir(allocator: std.mem.Allocator, config_dir: []const u8
 }
 
 pub fn defaultConfigPath(allocator: std.mem.Allocator) ![]u8 {
-    const nullclaw_home = std.process.getEnvVarOwned(allocator, "NULLCLAW_HOME") catch |err| switch (err) {
+    const krustyklaw_home = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_HOME") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => null,
         else => return err,
     };
-    defer if (nullclaw_home) |config_dir| allocator.free(config_dir);
+    defer if (krustyklaw_home) |config_dir| allocator.free(config_dir);
 
-    const config_dir = try defaultConfigDir(allocator, nullclaw_home);
+    const config_dir = try defaultConfigDir(allocator, krustyklaw_home);
     defer allocator.free(config_dir);
 
     return try defaultConfigPathFromDir(allocator, config_dir);
@@ -229,20 +229,20 @@ fn readConfigOrDefault(allocator: std.mem.Allocator, config_path: []const u8) !s
     return .{ .content = content, .existed = true };
 }
 
-test "defaultConfigDir uses NULLCLAW_HOME override" {
+test "defaultConfigDir uses KRUSTYKLAW_HOME override" {
     const allocator = std.testing.allocator;
-    const config_dir = try defaultConfigDir(allocator, "/tmp/nullclaw-home");
+    const config_dir = try defaultConfigDir(allocator, "/tmp/krustyklaw-home");
     defer allocator.free(config_dir);
 
-    try std.testing.expectEqualStrings("/tmp/nullclaw-home", config_dir);
+    try std.testing.expectEqualStrings("/tmp/krustyklaw-home", config_dir);
 }
 
-test "defaultConfigPath appends config filename to NULLCLAW_HOME override" {
+test "defaultConfigPath appends config filename to KRUSTYKLAW_HOME override" {
     const allocator = std.testing.allocator;
-    const config_path = try defaultConfigPathFromDir(allocator, "/tmp/nullclaw-home");
+    const config_path = try defaultConfigPathFromDir(allocator, "/tmp/krustyklaw-home");
     defer allocator.free(config_path);
 
-    const expected = try std.fmt.allocPrint(allocator, "/tmp/nullclaw-home{s}config.json", .{std.fs.path.sep_str});
+    const expected = try std.fmt.allocPrint(allocator, "/tmp/krustyklaw-home{s}config.json", .{std.fs.path.sep_str});
     defer allocator.free(expected);
 
     try std.testing.expectEqualStrings(expected, config_path);

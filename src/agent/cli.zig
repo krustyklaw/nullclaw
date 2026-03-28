@@ -1,7 +1,7 @@
 //! CLI entry point — single-message and interactive REPL modes.
 //!
 //! Extracted from agent/root.zig. Contains `run()` (the main entry point
-//! for `nullclaw agent`) and the streaming stdout callback.
+//! for `krustyklaw agent`) and the streaming stdout callback.
 
 const std = @import("std");
 const log = std.log.scoped(.agent);
@@ -111,7 +111,7 @@ fn writeRateLimitHint(w: *std.Io.Writer, default_provider: []const u8) !void {
         "Hint: keep \"reliability.provider_retries\" low, raise \"reliability.provider_backoff_ms\", and add \"reliability.fallback_providers\" or \"reliability.api_keys\" if you have alternatives.\n",
     );
     try w.writeAll(
-        "Hint: use `nullclaw agent --verbose` for foreground runs. In service mode, inspect `~/.nullclaw/logs/daemon.stdout.log` and `~/.nullclaw/logs/daemon.stderr.log`.\n",
+        "Hint: use `krustyklaw agent --verbose` for foreground runs. In service mode, inspect `~/.krustyklaw/logs/daemon.stdout.log` and `~/.krustyklaw/logs/daemon.stderr.log`.\n",
     );
 }
 
@@ -247,10 +247,10 @@ fn resolveProfileProvider(
 }
 
 /// Run the agent in single-message or interactive REPL mode.
-/// This is the main entry point called by `nullclaw agent`.
+/// This is the main entry point called by `krustyklaw agent`.
 pub fn run(allocator: std.mem.Allocator, args: []const [:0]const u8) !void {
     var cfg = Config.load(allocator) catch {
-        log.err("No config found. Run `nullclaw onboard` first.", .{});
+        log.err("No config found. Run `krustyklaw onboard` first.", .{});
         return;
     };
     defer cfg.deinit();
@@ -454,7 +454,7 @@ pub fn run(allocator: std.mem.Allocator, args: []const [:0]const u8) !void {
 
     const supports_streaming = provider_i.supportsStreaming();
 
-    // Single message mode: nullclaw agent -m "hello"
+    // Single message mode: krustyklaw agent -m "hello"
     if (message_arg) |message| {
         // Keep subprocess runs quiet by default; cron and other callers
         // consume this mode programmatically and should only see the response.
@@ -527,7 +527,7 @@ pub fn run(allocator: std.mem.Allocator, args: []const [:0]const u8) !void {
 
     // Interactive REPL mode
     cfg.printModelConfig();
-    try w.print("nullclaw Agent -- Interactive Mode\n", .{});
+    try w.print("krustyklaw Agent -- Interactive Mode\n", .{});
     try w.print("Provider: {s} | Model: {s}\n", .{
         if (selected_profile_storage) |profile| profile.provider else cfg.default_provider,
         if (selected_profile_storage) |profile| profile.model else (cfg.default_model orelse "(default)"),
@@ -805,6 +805,6 @@ test "writeRateLimitHint mentions reliability knobs and logs" {
     try writeRateLimitHint(&aw.writer, "kimi");
     const rendered = aw.written();
     try std.testing.expect(std.mem.indexOf(u8, rendered, "reliability.provider_backoff_ms") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "~/.nullclaw/logs/daemon.stdout.log") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "~/.krustyklaw/logs/daemon.stdout.log") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "kimi appears rate-limited or quota-constrained") != null);
 }

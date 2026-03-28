@@ -22,7 +22,7 @@ to add new messaging channels without merging channel-specific code into core.
 `channels.external` is the clean extension path for community or site-specific
 channels. The design goals are:
 
-- keep channel-specific SDKs, sidecars, and bridge logic out of nullclaw core
+- keep channel-specific SDKs, sidecars, and bridge logic out of krustyklaw core
 - avoid in-process ABI/plugin loading complexity
 - allow per-channel code to live in separate repositories and languages
 - keep the host contract narrow, explicit, and easy to supervise
@@ -30,7 +30,7 @@ channels. The design goals are:
 The host/plugin boundary is:
 
 - transport: line-delimited JSON-RPC over `stdin`/`stdout`
-- process model: child process started by nullclaw
+- process model: child process started by krustyklaw
 - routing surface: generic `Channel` operations only
 - channel-specific behavior: implemented entirely in the plugin
 
@@ -41,7 +41,7 @@ Use an external channel plugin when:
 - the channel requires a large SDK or non-Zig dependency
 - the integration is niche, experimental, or operator-specific
 - the channel is best represented by a local sidecar or bridge
-- you want to iterate independently from nullclaw release cadence
+- you want to iterate independently from krustyklaw release cadence
 
 Do not use it when:
 
@@ -63,7 +63,7 @@ Example:
         "wa-web": {
           "runtime_name": "whatsapp_web",
           "transport": {
-            "command": "/opt/nullclaw/plugins/nullclaw-plugin-whatsapp-web",
+            "command": "/opt/krustyklaw/plugins/krustyklaw-plugin-whatsapp-web",
             "args": ["--stdio"],
             "timeout_ms": 10000,
             "env": {
@@ -85,7 +85,7 @@ Fields:
 
 - `runtime_name`
   The runtime channel name used by routing, bindings, session keys, daemon
-  dispatch, and `nullclaw channel start <runtime_name>`.
+  dispatch, and `krustyklaw channel start <runtime_name>`.
 - `transport.command`
   Executable path or command name for the plugin process.
 - `transport.args`
@@ -206,7 +206,7 @@ Host request:
     "runtime": {
       "name": "whatsapp_web",
       "account_id": "wa-web",
-      "state_dir": "/home/user/.nullclaw/workspace/state/channels/external/whatsapp_web/wa-web"
+      "state_dir": "/home/user/.krustyklaw/workspace/state/channels/external/whatsapp_web/wa-web"
     },
     "config": {
       "bridge_url": "http://127.0.0.1:3301",
@@ -634,7 +634,7 @@ Recommended JSON-RPC error cases:
 ## Timeouts And Supervision
 
 The configured `transport.timeout_ms` is not a promise that every call may
-block that long in every control path. NullClaw applies tighter caps internally
+block that long in every control path. KrustyKlaw applies tighter caps internally
 for health and supervision-sensitive requests.
 
 Operational implications:
@@ -652,7 +652,7 @@ Plugins should still:
 ## Security And Isolation
 
 The host boundary is intentionally narrow, but plugin code still runs as a local
-process with the privileges of the nullclaw user.
+process with the privileges of the krustyklaw user.
 
 Recommendations:
 
@@ -667,13 +667,13 @@ Recommendations:
 Useful commands:
 
 ```bash
-nullclaw channel start external
+krustyklaw channel start external
 ```
 
 Starts the first configured external account.
 
 ```bash
-nullclaw channel start whatsapp_web
+krustyklaw channel start whatsapp_web
 ```
 
 Starts the configured external account with runtime name `whatsapp_web`.
@@ -682,8 +682,8 @@ Starts the configured external account with runtime name `whatsapp_web`.
 
 The repository includes a bridge adapter at:
 
-- [`examples/whatsapp-web/nullclaw-plugin-whatsapp-web`](../../examples/whatsapp-web/nullclaw-plugin-whatsapp-web)
-- [`examples/external-channel-template/nullclaw-plugin-template`](../../examples/external-channel-template/nullclaw-plugin-template)
+- [`examples/whatsapp-web/krustyklaw-plugin-whatsapp-web`](../../examples/whatsapp-web/krustyklaw-plugin-whatsapp-web)
+- [`examples/external-channel-template/krustyklaw-plugin-template`](../../examples/external-channel-template/krustyklaw-plugin-template)
 
 It converts the WhatsApp Web HTTP bridge shape from PR #265 into the current
 ExternalChannel JSON-RPC contract.
@@ -700,11 +700,11 @@ bridge, use:
 
 Companion out-of-tree repositories:
 
-- [nullclaw/nullclaw-channel-baileys](https://github.com/nullclaw/nullclaw-channel-baileys)
+- [krustyklaw/krustyklaw-channel-baileys](https://github.com/krustyklaw/krustyklaw-channel-baileys)
   Direct Node/Baileys external channel plugin with QR and pairing-code flows.
-- [nullclaw/nullclaw-channel-whatsmeow-bridge](https://github.com/nullclaw/nullclaw-channel-whatsmeow-bridge)
+- [krustyklaw/krustyklaw-channel-whatsmeow-bridge](https://github.com/krustyklaw/krustyklaw-channel-whatsmeow-bridge)
   Standalone Go/whatsmeow HTTP bridge with QR, pairing-code, and deployment assets.
-- `nullclaw-channel-imap-connector`
+- `krustyklaw-channel-imap-connector`
   Python IMAP/SMTP external channel plugin for bidirectional email plus
   companion mailbox CLI workflows.
 

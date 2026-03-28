@@ -311,7 +311,7 @@ fn isTruthyFlag(value: []const u8) bool {
 }
 
 pub fn isYoloForceEnabled(allocator: std.mem.Allocator) bool {
-    if (platform.getEnvOrNull(allocator, "NULLCLAW_ALLOW_YOLO")) |v| {
+    if (platform.getEnvOrNull(allocator, "KRUSTYKLAW_ALLOW_YOLO")) |v| {
         defer allocator.free(v);
         if (isTruthyFlag(v)) return true;
     }

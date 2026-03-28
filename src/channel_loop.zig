@@ -773,7 +773,7 @@ fn handleTelegramBuiltinCommand(
 
     const confirmation = std.fmt.allocPrint(
         allocator,
-        "Created topic \"{s}\" (thread {d}). Messages in that topic will use an isolated nullclaw session.",
+        "Created topic \"{s}\" (thread {d}). Messages in that topic will use an isolated krustyklaw session.",
         .{ topic_name, thread_id },
     ) catch null;
     defer if (confirmation) |msg| allocator.free(msg);
@@ -1298,7 +1298,7 @@ pub fn runTelegramLoop(
     var evict_counter: u32 = 0;
 
     const model = config.default_model orelse {
-        log.err("No default model configured. Set agents.defaults.model.primary in ~/.nullclaw/config.json or run `nullclaw onboard`.", .{});
+        log.err("No default model configured. Set agents.defaults.model.primary in ~/.krustyklaw/config.json or run `krustyklaw onboard`.", .{});
         return;
     };
 
@@ -2131,7 +2131,7 @@ test "isStopLikeCommand matches stop and abort variants" {
     try std.testing.expect(control_plane.isStopLikeCommand("  /stop  "));
     try std.testing.expect(control_plane.isStopLikeCommand("/abort"));
     try std.testing.expect(control_plane.isStopLikeCommand("/STOP"));
-    try std.testing.expect(control_plane.isStopLikeCommand("/abort@nullclaw_bot"));
+    try std.testing.expect(control_plane.isStopLikeCommand("/abort@krustyklaw_bot"));
     try std.testing.expect(control_plane.isStopLikeCommand("/stop: now"));
     try std.testing.expect(control_plane.isStopLikeCommand("/abort please"));
 }
@@ -2332,8 +2332,8 @@ test "resolveTelegramBaseRouteKey matches topic-specific telegram binding before
         },
     };
     const cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agents = &agents,
         .agent_bindings = &bindings,
@@ -2360,8 +2360,8 @@ test "resolveTelegramBaseRouteKey falls back to base telegram group binding for 
         },
     }};
     const cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agents = &agents,
         .agent_bindings = &bindings,
@@ -2376,8 +2376,8 @@ test "resolveTelegramBaseRouteKey falls back to base telegram group binding for 
 test "resolveTelegramBaseRouteKey auto-provisions direct telegram peers" {
     const allocator = std.testing.allocator;
     const cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .session = .{
             .auto_provision_direct_agents = true,
@@ -2416,8 +2416,8 @@ test "buildTelegramBindingStatusReply distinguishes exact and inherited peer bin
         },
     };
     const cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agents = &agents,
         .agent_bindings = &bindings,
@@ -2435,8 +2435,8 @@ test "buildTelegramBindingStatusReply distinguishes exact and inherited peer bin
 test "buildTelegramBindingStatusReply shows synthetic peer agent for auto-provisioned dm" {
     const allocator = std.testing.allocator;
     const cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .session = .{
             .auto_provision_direct_agents = true,

@@ -1,6 +1,6 @@
 /// --probe-channel-health subcommand: validate channel credentials.
 ///
-/// Usage: nullclaw --probe-channel-health --channel telegram --account default [--timeout-secs 10]
+/// Usage: krustyklaw --probe-channel-health --channel telegram --account default [--timeout-secs 10]
 ///
 /// Returns JSON to stdout:
 ///   {"channel":"telegram","account":"default","live_ok":false,"reason":"missing_bot_token"}

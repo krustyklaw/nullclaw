@@ -1,10 +1,10 @@
-# NullClaw 中文文档
+# KrustyKlaw 中文文档
 
 本目录提供面向使用者、运维者与贡献者的中文文档入口。
 
 社区： [加入 Discord](https://discord.gg/Bfmdua22Ud)
 
-如果你刚接触 NullClaw，先从这里找对阅读路径，再进入具体章节。
+如果你刚接触 KrustyKlaw，先从这里找对阅读路径，再进入具体章节。
 
 ## 页面怎么用
 
@@ -86,16 +86,16 @@
 
 ## 先看这 3 条
 
-1. NullClaw 当前要求 **Zig 0.15.2**（精确版本）。
-2. 默认配置文件路径为 `~/.nullclaw/config.json`（由 `nullclaw onboard` 生成）。
+1. KrustyKlaw 当前要求 **Zig 0.15.2**（精确版本）。
+2. 默认配置文件路径为 `~/.krustyklaw/config.json`（由 `krustyklaw onboard` 生成）。
 3. 首次上手建议先跑 `onboard --interactive`，再用 `agent` 和 `gateway` 验证。
 
 ## 最短上手路径（3 分钟）
 
 ```bash
-brew install nullclaw
-nullclaw onboard --interactive
-nullclaw agent -m "你好，nullclaw"
+brew install krustyklaw
+krustyklaw onboard --interactive
+krustyklaw agent -m "你好，krustyklaw"
 ```
 
 如果你不用 Homebrew，请按 [安装指南](./installation.md) 走源码或容器流程。

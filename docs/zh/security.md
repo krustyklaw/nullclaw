@@ -1,10 +1,10 @@
 # 安全机制
 
-NullClaw 默认走 secure-by-default：本地绑定、配对鉴权、沙箱隔离、最小权限。
+KrustyKlaw 默认走 secure-by-default：本地绑定、配对鉴权、沙箱隔离、最小权限。
 
 ## 页面导航
 
-- 这页适合谁：要评估默认安全边界、审查风险配置，或准备把 NullClaw 接到长期运行环境的人。
+- 这页适合谁：要评估默认安全边界、审查风险配置，或准备把 KrustyKlaw 接到长期运行环境的人。
 - 看完去哪里：要落到具体字段看 [配置指南](./configuration.md)；要对外提供 webhook 看 [Gateway API](./gateway-api.md)；想理解这些边界在系统中的位置看 [架构总览](./architecture.md)。
 - 如果你是从某页来的：从 [配置指南](./configuration.md) 来，这页补的是风险判断与默认建议；从 [使用与运维](./usage.md) 来，这页可作为上线前安全检查表；从 [Gateway API](./gateway-api.md) 来，这页帮助确认 pairing、public bind 与 token 管理原则。
 

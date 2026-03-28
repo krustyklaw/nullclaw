@@ -13,11 +13,11 @@ const fs_compat = @import("fs_compat.zig");
 const providers = @import("providers/root.zig");
 const security = @import("security/root.zig");
 
-const SERVICE_LABEL = "com.nullclaw.daemon";
-const WINDOWS_SERVICE_NAME = "nullclaw";
-const WINDOWS_SERVICE_DISPLAY_NAME = "nullclaw gateway runtime";
-const OPENRC_SERVICE_NAME = "nullclaw";
-const OPENRC_SERVICE_FILE = "/etc/init.d/nullclaw";
+const SERVICE_LABEL = "com.krustyklaw.daemon";
+const WINDOWS_SERVICE_NAME = "krustyklaw";
+const WINDOWS_SERVICE_DISPLAY_NAME = "krustyklaw gateway runtime";
+const OPENRC_SERVICE_NAME = "krustyklaw";
+const OPENRC_SERVICE_FILE = "/etc/init.d/krustyklaw";
 pub const WINDOWS_SERVICE_GATEWAY_ARG = "__windows-service-gateway";
 
 const windows = std.os.windows;
@@ -157,7 +157,7 @@ fn startService(allocator: std.mem.Allocator) !void {
             .systemd_user => {
                 try assertLinuxSystemdUserAvailable(allocator);
                 try runChecked(allocator, &.{ "systemctl", "--user", "daemon-reload" });
-                try runChecked(allocator, &.{ "systemctl", "--user", "start", "nullclaw.service" });
+                try runChecked(allocator, &.{ "systemctl", "--user", "start", "krustyklaw.service" });
             },
             .openrc => try openRcRunChecked(allocator, &.{ OPENRC_SERVICE_NAME, "start" }),
         }
@@ -178,7 +178,7 @@ fn stopService(allocator: std.mem.Allocator) !void {
         switch (try detectLinuxServiceManager(allocator)) {
             .systemd_user => {
                 try assertLinuxSystemdUserAvailable(allocator);
-                try runChecked(allocator, &.{ "systemctl", "--user", "stop", "nullclaw.service" });
+                try runChecked(allocator, &.{ "systemctl", "--user", "stop", "krustyklaw.service" });
             },
             .openrc => try openRcRunChecked(allocator, &.{ OPENRC_SERVICE_NAME, "stop" }),
         }
@@ -208,7 +208,7 @@ fn stopServiceForRestart(allocator: std.mem.Allocator) !void {
         switch (try detectLinuxServiceManager(allocator)) {
             .systemd_user => {
                 try assertLinuxSystemdUserAvailable(allocator);
-                const status = try runCaptureStatus(allocator, &.{ "systemctl", "--user", "stop", "nullclaw.service" });
+                const status = try runCaptureStatus(allocator, &.{ "systemctl", "--user", "stop", "krustyklaw.service" });
                 defer allocator.free(status.stdout);
                 defer allocator.free(status.stderr);
                 if (status.success) return;
@@ -257,7 +257,7 @@ fn serviceStatus(allocator: std.mem.Allocator) !void {
         switch (try detectLinuxServiceManager(allocator)) {
             .systemd_user => {
                 try assertLinuxSystemdUserAvailable(allocator);
-                const output = runCapture(allocator, &.{ "systemctl", "--user", "is-active", "nullclaw.service" }) catch try allocator.dupe(u8, "unknown");
+                const output = runCapture(allocator, &.{ "systemctl", "--user", "is-active", "krustyklaw.service" }) catch try allocator.dupe(u8, "unknown");
                 defer allocator.free(output);
                 try w.print("Service state: {s}\n", .{std.mem.trim(u8, output, " \t\n\r")});
                 const unit = try linuxServiceFile(allocator);
@@ -351,7 +351,7 @@ fn installMacos(allocator: std.mem.Allocator) !void {
 
     const home = try getHomeDir(allocator);
     defer allocator.free(home);
-    const logs_dir = try std.fmt.allocPrint(allocator, "{s}/.nullclaw/logs", .{home});
+    const logs_dir = try std.fmt.allocPrint(allocator, "{s}/.krustyklaw/logs", .{home});
     defer allocator.free(logs_dir);
     std.fs.makeDirAbsolute(logs_dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
@@ -411,18 +411,18 @@ fn resolveServiceExecutablePath(allocator: std.mem.Allocator, exe_path: []const 
 }
 
 fn preferredHomebrewShimPath(allocator: std.mem.Allocator, exe_path: []const u8) !?[]u8 {
-    if (!std.mem.endsWith(u8, exe_path, "/bin/nullclaw")) {
+    if (!std.mem.endsWith(u8, exe_path, "/bin/krustyklaw")) {
         return null;
     }
 
-    const cellar_marker = "/Cellar/nullclaw/";
+    const cellar_marker = "/Cellar/krustyklaw/";
     const cellar_index = std.mem.indexOf(u8, exe_path, cellar_marker) orelse return null;
     if (cellar_index == 0) {
         return null;
     }
 
     // selfExePath uses POSIX separators for Homebrew installs even when tests run on Windows.
-    const candidate = try std.fmt.allocPrint(allocator, "{s}/bin/nullclaw", .{exe_path[0..cellar_index]});
+    const candidate = try std.fmt.allocPrint(allocator, "{s}/bin/krustyklaw", .{exe_path[0..cellar_index]});
     return candidate;
 }
 
@@ -450,12 +450,12 @@ fn installLinuxSystemd(allocator: std.mem.Allocator) !void {
 
     const home = try getHomeDir(allocator);
     defer allocator.free(home);
-    const config_dir = try std.fs.path.join(allocator, &.{ home, ".nullclaw" });
+    const config_dir = try std.fs.path.join(allocator, &.{ home, ".krustyklaw" });
     defer allocator.free(config_dir);
 
     const content = try std.fmt.allocPrint(allocator,
         \\[Unit]
-        \\Description=nullclaw gateway runtime
+        \\Description=krustyklaw gateway runtime
         \\After=network.target
         \\
         \\[Service]
@@ -475,7 +475,7 @@ fn installLinuxSystemd(allocator: std.mem.Allocator) !void {
     try file.writeAll(content);
 
     try runChecked(allocator, &.{ "systemctl", "--user", "daemon-reload" });
-    try runChecked(allocator, &.{ "systemctl", "--user", "enable", "nullclaw.service" });
+    try runChecked(allocator, &.{ "systemctl", "--user", "enable", "krustyklaw.service" });
 }
 
 fn installLinuxOpenRc(allocator: std.mem.Allocator) !void {
@@ -492,7 +492,7 @@ fn installLinuxOpenRc(allocator: std.mem.Allocator) !void {
     const service_home = try getServiceHomeDir(allocator);
     defer allocator.free(service_home);
 
-    const config_dir = try std.fs.path.join(allocator, &.{ service_home, ".nullclaw" });
+    const config_dir = try std.fs.path.join(allocator, &.{ service_home, ".krustyklaw" });
     defer allocator.free(config_dir);
 
     const script = try buildOpenRcScript(allocator, .{
@@ -585,7 +585,7 @@ fn macosServiceFile(allocator: std.mem.Allocator) ![]const u8 {
 fn linuxServiceFile(allocator: std.mem.Allocator) ![]const u8 {
     const home = try getHomeDir(allocator);
     defer allocator.free(home);
-    return std.fs.path.join(allocator, &.{ home, ".config", "systemd", "user", "nullclaw.service" });
+    return std.fs.path.join(allocator, &.{ home, ".config", "systemd", "user", "krustyklaw.service" });
 }
 
 fn fileExistsAbsolute(path: []const u8) bool {
@@ -796,15 +796,15 @@ fn buildOpenRcScript(allocator: std.mem.Allocator, cfg: OpenRcScriptConfig) ![]u
     return std.fmt.allocPrint(allocator,
         \\#!{s}
         \\
-        \\name="nullclaw"
-        \\description="nullclaw gateway runtime"
+        \\name="krustyklaw"
+        \\description="krustyklaw gateway runtime"
         \\command={s}
         \\command_args="gateway"
         \\command_background="yes"
         \\pidfile="/run/${{RC_SVCNAME}}.pid"
         \\directory={s}
         \\export HOME={s}
-        \\export NULLCLAW_HOME={s}
+        \\export KRUSTYKLAW_HOME={s}
         \\{s}
         \\depend() {{
         \\    need net
@@ -813,7 +813,7 @@ fn buildOpenRcScript(allocator: std.mem.Allocator, cfg: OpenRcScriptConfig) ![]u
 }
 
 fn isSystemdUnitNotLoadedDetail(detail: []const u8) bool {
-    return std.ascii.indexOfIgnoreCase(detail, "unit nullclaw.service not loaded") != null or
+    return std.ascii.indexOfIgnoreCase(detail, "unit krustyklaw.service not loaded") != null or
         std.ascii.indexOfIgnoreCase(detail, "could not be found") != null or
         std.ascii.indexOfIgnoreCase(detail, "not loaded") != null;
 }
@@ -821,7 +821,7 @@ fn isSystemdUnitNotLoadedDetail(detail: []const u8) bool {
 fn isOpenRcServiceMissingDetail(detail: []const u8) bool {
     return std.ascii.indexOfIgnoreCase(detail, "does not exist") != null or
         std.ascii.indexOfIgnoreCase(detail, "not found") != null or
-        std.ascii.indexOfIgnoreCase(detail, "service `nullclaw'") != null;
+        std.ascii.indexOfIgnoreCase(detail, "service `krustyklaw'") != null;
 }
 
 fn isOpenRcInactiveDetail(detail: []const u8) bool {
@@ -1068,7 +1068,7 @@ fn runWindowsServiceGatewayProcess(allocator: std.mem.Allocator) !void {
     try applyServiceRuntimeProviderOverrides(&cfg);
     if (!security.isYoloGatewayAllowed(cfg.autonomy.level, cfg.gateway.host, security.isYoloForceEnabled(allocator))) {
         std.debug.print(
-            "Refusing to start gateway service with autonomy.level=yolo on non-local host '{s}'. Use localhost or set NULLCLAW_ALLOW_YOLO=1 to force this insecure mode.\n",
+            "Refusing to start gateway service with autonomy.level=yolo on non-local host '{s}'. Use localhost or set KRUSTYKLAW_ALLOW_YOLO=1 to force this insecure mode.\n",
             .{cfg.gateway.host},
         );
         return error.InsecureYoloGatewayBind;
@@ -1120,7 +1120,7 @@ fn xmlEscape(input: []const u8) []const u8 {
 
 test "service label is set" {
     try std.testing.expect(SERVICE_LABEL.len > 0);
-    try std.testing.expect(std.mem.indexOf(u8, SERVICE_LABEL, "nullclaw") != null);
+    try std.testing.expect(std.mem.indexOf(u8, SERVICE_LABEL, "krustyklaw") != null);
 }
 
 test "macosServiceFile contains label" {
@@ -1133,38 +1133,38 @@ test "macosServiceFile contains label" {
 test "linuxServiceFile contains service suffix" {
     const path = linuxServiceFile(std.testing.allocator) catch return;
     defer std.testing.allocator.free(path);
-    try std.testing.expect(std.mem.endsWith(u8, path, "nullclaw.service"));
+    try std.testing.expect(std.mem.endsWith(u8, path, "krustyklaw.service"));
 }
 
 test "xmlEscape returns input for safe strings" {
-    const input = "/usr/local/bin/nullclaw";
+    const input = "/usr/local/bin/krustyklaw";
     try std.testing.expectEqualStrings(input, xmlEscape(input));
 }
 
 test "preferredHomebrewShimPath resolves Apple Silicon Cellar install" {
-    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/opt/homebrew/Cellar/nullclaw/2026.3.7/bin/nullclaw")).?;
+    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/opt/homebrew/Cellar/krustyklaw/2026.3.7/bin/krustyklaw")).?;
     defer std.testing.allocator.free(shim);
-    try std.testing.expectEqualStrings("/opt/homebrew/bin/nullclaw", shim);
+    try std.testing.expectEqualStrings("/opt/homebrew/bin/krustyklaw", shim);
 }
 
 test "preferredHomebrewShimPath resolves Intel Homebrew Cellar install" {
-    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/usr/local/Cellar/nullclaw/2026.3.7/bin/nullclaw")).?;
+    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/usr/local/Cellar/krustyklaw/2026.3.7/bin/krustyklaw")).?;
     defer std.testing.allocator.free(shim);
-    try std.testing.expectEqualStrings("/usr/local/bin/nullclaw", shim);
+    try std.testing.expectEqualStrings("/usr/local/bin/krustyklaw", shim);
 }
 
 test "preferredHomebrewShimPath resolves Linux Homebrew Cellar install" {
-    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/home/linuxbrew/.linuxbrew/Cellar/nullclaw/2026.3.7/bin/nullclaw")).?;
+    const shim = (try preferredHomebrewShimPath(std.testing.allocator, "/home/linuxbrew/.linuxbrew/Cellar/krustyklaw/2026.3.7/bin/krustyklaw")).?;
     defer std.testing.allocator.free(shim);
-    try std.testing.expectEqualStrings("/home/linuxbrew/.linuxbrew/bin/nullclaw", shim);
+    try std.testing.expectEqualStrings("/home/linuxbrew/.linuxbrew/bin/krustyklaw", shim);
 }
 
 test "preferredHomebrewShimPath ignores non-Cellar paths" {
-    try std.testing.expect((try preferredHomebrewShimPath(std.testing.allocator, "/Applications/nullclaw/bin/nullclaw")) == null);
+    try std.testing.expect((try preferredHomebrewShimPath(std.testing.allocator, "/Applications/krustyklaw/bin/krustyklaw")) == null);
 }
 
 test "preferredHomebrewShimPath ignores non-executable Cellar paths" {
-    try std.testing.expect((try preferredHomebrewShimPath(std.testing.allocator, "/opt/homebrew/Cellar/nullclaw/2026.3.7/share/nullclaw.txt")) == null);
+    try std.testing.expect((try preferredHomebrewShimPath(std.testing.allocator, "/opt/homebrew/Cellar/krustyklaw/2026.3.7/share/krustyklaw.txt")) == null);
 }
 
 test "runChecked succeeds for true command" {
@@ -1188,7 +1188,7 @@ test "isSystemdUnavailableDetail detects common unavailable errors" {
     try std.testing.expect(isSystemdUnavailableDetail("Failed to connect to bus: No medium found"));
     try std.testing.expect(isSystemdUnavailableDetail("System has not been booted with systemd as init system"));
     try std.testing.expect(isSystemdUnavailableDetail("No such file or directory"));
-    try std.testing.expect(!isSystemdUnavailableDetail("unit nullclaw.service not found"));
+    try std.testing.expect(!isSystemdUnavailableDetail("unit krustyklaw.service not found"));
     try std.testing.expect(!isSystemdUnavailableDetail("permission denied"));
 }
 
@@ -1230,30 +1230,30 @@ test "parsePasswdHome extracts matching user home" {
 test "buildOpenRcScript includes user and config env" {
     const script = try buildOpenRcScript(std.testing.allocator, .{
         .openrc_run_path = "/sbin/openrc-run",
-        .service_exe_path = "/usr/local/bin/nullclaw",
+        .service_exe_path = "/usr/local/bin/krustyklaw",
         .service_user = "alice",
         .service_home = "/home/alice",
-        .config_dir = "/home/alice/.nullclaw",
+        .config_dir = "/home/alice/.krustyklaw",
     });
     defer std.testing.allocator.free(script);
 
     try std.testing.expect(std.mem.indexOf(u8, script, "#!/sbin/openrc-run") != null);
-    try std.testing.expect(std.mem.indexOf(u8, script, "command=\"/usr/local/bin/nullclaw\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, script, "command=\"/usr/local/bin/krustyklaw\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, script, "command_user=\"alice\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, script, "export HOME=\"/home/alice\"") != null);
-    try std.testing.expect(std.mem.indexOf(u8, script, "export NULLCLAW_HOME=\"/home/alice/.nullclaw\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, script, "export KRUSTYKLAW_HOME=\"/home/alice/.krustyklaw\"") != null);
 }
 
 test "openRcServiceState classifies common states" {
     try std.testing.expectEqualStrings("running", openRcServiceState("status: started"));
     try std.testing.expectEqualStrings("stopped", openRcServiceState("status: stopped"));
     try std.testing.expectEqualStrings("crashed", openRcServiceState("status: crashed"));
-    try std.testing.expectEqualStrings("not installed", openRcServiceState("service `nullclaw' does not exist"));
+    try std.testing.expectEqualStrings("not installed", openRcServiceState("service `krustyklaw' does not exist"));
 }
 
 test "isSystemdUnitNotLoadedDetail detects stop-not-loaded patterns" {
-    try std.testing.expect(isSystemdUnitNotLoadedDetail("Unit nullclaw.service not loaded."));
-    try std.testing.expect(isSystemdUnitNotLoadedDetail("Unit nullclaw.service could not be found."));
+    try std.testing.expect(isSystemdUnitNotLoadedDetail("Unit krustyklaw.service not loaded."));
+    try std.testing.expect(isSystemdUnitNotLoadedDetail("Unit krustyklaw.service could not be found."));
     try std.testing.expect(isSystemdUnitNotLoadedDetail("not loaded"));
     try std.testing.expect(!isSystemdUnitNotLoadedDetail("permission denied"));
 }
@@ -1284,10 +1284,10 @@ test "windowsServiceState parses common states" {
 }
 
 test "windowsServiceBinPath uses hidden service gateway entrypoint" {
-    const bin_path = try windowsServiceBinPath(std.testing.allocator, "C:\\Program Files\\nullclaw\\nullclaw.exe");
+    const bin_path = try windowsServiceBinPath(std.testing.allocator, "C:\\Program Files\\krustyklaw\\krustyklaw.exe");
     defer std.testing.allocator.free(bin_path);
 
-    try std.testing.expectEqualStrings("\"C:\\Program Files\\nullclaw\\nullclaw.exe\" __windows-service-gateway", bin_path);
+    try std.testing.expectEqualStrings("\"C:\\Program Files\\krustyklaw\\krustyklaw.exe\" __windows-service-gateway", bin_path);
 }
 
 test "isWindowsServiceGatewayArg matches hidden service sentinel" {

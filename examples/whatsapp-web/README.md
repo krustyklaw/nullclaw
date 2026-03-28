@@ -2,7 +2,7 @@
 
 This directory contains a reference adapter for `channels.external`:
 
-- `nullclaw-plugin-whatsapp-web`
+- `krustyklaw-plugin-whatsapp-web`
   Converts the ExternalChannel JSON-RPC/stdio plugin protocol into the
   HTTP bridge contract from the whatsmeow example (`/health`, `/poll`, `/send`).
   The adapter advertises `protocol_version=2`, `capabilities.health=true`,
@@ -14,9 +14,9 @@ This directory contains a reference adapter for `channels.external`:
 
 Related out-of-tree repositories:
 
-- [nullclaw/nullclaw-channel-whatsmeow-bridge](https://github.com/nullclaw/nullclaw-channel-whatsmeow-bridge)
+- [krustyklaw/krustyklaw-channel-whatsmeow-bridge](https://github.com/krustyklaw/krustyklaw-channel-whatsmeow-bridge)
   Production-oriented Go/whatsmeow bridge with QR, pairing-code, and deployment assets.
-- [nullclaw/nullclaw-channel-baileys](https://github.com/nullclaw/nullclaw-channel-baileys)
+- [krustyklaw/krustyklaw-channel-baileys](https://github.com/krustyklaw/krustyklaw-channel-baileys)
   Direct Node/Baileys external channel plugin if you do not want an HTTP bridge at all.
 
 This in-tree directory remains a reference adapter and compatibility example.
@@ -31,7 +31,7 @@ Typical config:
         "wa-web": {
           "runtime_name": "whatsapp_web",
           "transport": {
-            "command": "/absolute/path/to/examples/whatsapp-web/nullclaw-plugin-whatsapp-web",
+            "command": "/absolute/path/to/examples/whatsapp-web/krustyklaw-plugin-whatsapp-web",
             "timeout_ms": 10000
           },
           "config": {
@@ -59,10 +59,10 @@ Optional `config` keys understood by the adapter:
 
 This example is intentionally split into three layers:
 
-1. `nullclaw`
+1. `krustyklaw`
    Starts the external plugin process, supervises it, and routes inbound and
    outbound messages through the generic `Channel` runtime.
-2. `nullclaw-plugin-whatsapp-web`
+2. `krustyklaw-plugin-whatsapp-web`
    Adapts the generic ExternalChannel JSON-RPC contract to a simple HTTP bridge.
    It can authenticate to that bridge with `config.api_key`.
 3. Your WhatsApp bridge / sidecar
@@ -71,7 +71,7 @@ This example is intentionally split into three layers:
 
 The important consequence is:
 
-- nullclaw does not log into WhatsApp directly
+- krustyklaw does not log into WhatsApp directly
 - the plugin does not show QR codes or create WhatsApp sessions
 - the bridge must implement WhatsApp login and keep its own auth/session state
 
@@ -126,7 +126,7 @@ If the bridge is protected, decide on an API token and keep it for
 
 ### 2. Complete WhatsApp login on the bridge side
 
-Before nullclaw can send or receive messages, the bridge must complete the real
+Before krustyklaw can send or receive messages, the bridge must complete the real
 WhatsApp login flow.
 
 Typical flow:
@@ -141,7 +141,7 @@ Typical flow:
 This part is bridge-specific by design. Nullclaw does not define how the QR is
 displayed.
 
-### 3. Verify bridge health before wiring nullclaw
+### 3. Verify bridge health before wiring krustyklaw
 
 Check the bridge directly first.
 
@@ -167,9 +167,9 @@ The adapter expects a JSON object with signals like:
 }
 ```
 
-If `logged_in` is `false`, nullclaw will keep seeing the channel as unhealthy.
+If `logged_in` is `false`, krustyklaw will keep seeing the channel as unhealthy.
 
-### 4. Configure nullclaw
+### 4. Configure krustyklaw
 
 Add an external channel account:
 
@@ -181,7 +181,7 @@ Add an external channel account:
         "wa-web": {
           "runtime_name": "whatsapp_web",
           "transport": {
-            "command": "/absolute/path/to/examples/whatsapp-web/nullclaw-plugin-whatsapp-web",
+            "command": "/absolute/path/to/examples/whatsapp-web/krustyklaw-plugin-whatsapp-web",
             "timeout_ms": 10000
           },
           "config": {
@@ -218,18 +218,18 @@ Meaning of the main fields:
 Start by runtime name:
 
 ```bash
-nullclaw channel start whatsapp_web
+krustyklaw channel start whatsapp_web
 ```
 
 Or start the first configured external account:
 
 ```bash
-nullclaw channel start external
+krustyklaw channel start external
 ```
 
 On startup:
 
-1. nullclaw starts the plugin process
+1. krustyklaw starts the plugin process
 2. the plugin validates `bridge_url` and config
 3. the plugin loads its local state from `state_dir`
 4. the plugin begins polling `/poll`
@@ -244,7 +244,7 @@ The bridge should surface that message through `/poll`, and the adapter will:
 - drop duplicates by `message.id`
 - enforce `allow_from` / `group_allow_from`
 - derive `peer_kind` and `peer_id`
-- emit `inbound_message` into nullclaw
+- emit `inbound_message` into krustyklaw
 
 For groups:
 
@@ -253,7 +253,7 @@ For groups:
 
 ### 7. Validate outbound flow
 
-Once the channel is healthy, nullclaw sends outbound text through:
+Once the channel is healthy, krustyklaw sends outbound text through:
 
 - plugin `send`
 - bridge `POST /send`
@@ -280,7 +280,7 @@ Plugin-owned state:
 - recently seen message ids for dedupe
 
 Plugin state is stored under the host-provided `state_dir`. If `state_dir` is
-missing, the plugin falls back to XDG or `~/.local/state/nullclaw/external/`.
+missing, the plugin falls back to XDG or `~/.local/state/krustyklaw/external/`.
 
 The plugin does not store the WhatsApp login session itself. If the bridge loses
 its own session, the operator must re-link on the bridge side.
@@ -334,7 +334,7 @@ For `POST /send`, the adapter sends:
 - `api_key` is bridge auth, not WhatsApp auth.
 - `state_dir` stores plugin poll state, not the real WhatsApp device session.
 - If your bridge does not expose QR/pairing UX, this example is incomplete.
-- If `/health` does not return `logged_in=true` after linking, nullclaw is right
+- If `/health` does not return `logged_in=true` after linking, krustyklaw is right
   to treat the channel as not ready.
 
 Protocol notes:

@@ -881,18 +881,18 @@ test "readLocalImage allows any path when skip_dir_check is set" {
     try std.testing.expect(result.data.len > 0);
 }
 
-test "prepareMessagesForProvider does not delete nullclaw temp image files" {
+test "prepareMessagesForProvider does not delete krustyklaw temp image files" {
     var tmp_dir = std.testing.tmpDir(.{});
     defer tmp_dir.cleanup();
 
     try tmp_dir.dir.writeFile(.{
-        .sub_path = "nullclaw_photo_123.png",
+        .sub_path = "krustyklaw_photo_123.png",
         .data = "\x89PNG\x0d\x0a\x1a\x0a",
     });
 
     const dir_path = try tmp_dir.dir.realpathAlloc(std.testing.allocator, ".");
     defer std.testing.allocator.free(dir_path);
-    const file_path = try std.fs.path.join(std.testing.allocator, &.{ dir_path, "nullclaw_photo_123.png" });
+    const file_path = try std.fs.path.join(std.testing.allocator, &.{ dir_path, "krustyklaw_photo_123.png" });
     defer std.testing.allocator.free(file_path);
 
     const arena_impl = std.heap.ArenaAllocator.init(std.testing.allocator);

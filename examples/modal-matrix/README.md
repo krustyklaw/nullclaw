@@ -1,12 +1,12 @@
 # Modal + Matrix multi-agent deployment
 
-Deploy nullclaw with multiple agents in a shared Matrix room on [Modal](https://modal.com).
+Deploy krustyklaw with multiple agents in a shared Matrix room on [Modal](https://modal.com).
 
 ## Architecture
 
 Two agents — planner and builder — run as separate Matrix bot accounts in the same room. Messages from each bot are visible in the room, so you can watch the agents collaborate.
 
-Secrets flow: `.env` (local) → `modal.Secret.from_dotenv()` → container env vars → `inject_secrets()` patches config at startup → nullclaw starts with real credentials. Patched config is written only inside the running container (`/nullclaw-data/.nullclaw/config.json`) and is not tracked in git.
+Secrets flow: `.env` (local) → `modal.Secret.from_dotenv()` → container env vars → `inject_secrets()` patches config at startup → krustyklaw starts with real credentials. Patched config is written only inside the running container (`/krustyklaw-data/.krustyklaw/config.json`) and is not tracked in git.
 
 ## Prerequisites
 
@@ -44,10 +44,10 @@ Set `TAILSCALE_AUTHKEY` in `.env` to automatically join your tailnet on deploy. 
 Once deployed, SSH in:
 
 ```sh
-ssh root@nullclaw-modal   # or whatever TAILSCALE_HOSTNAME you set
+ssh root@krustyklaw-modal   # or whatever TAILSCALE_HOSTNAME you set
 ```
 
-This gives you a shell in the running container — inspect logs, debug nullclaw, check the workspace, etc.
+This gives you a shell in the running container — inspect logs, debug krustyklaw, check the workspace, etc.
 
 ## Files
 
@@ -60,4 +60,4 @@ This gives you a shell in the running container — inspect logs, debug nullclaw
 | `deploy.sh` | yes | Validate + deploy |
 | `.env` | no | Your secrets |
 | `config.matrix.json` | no | Your config |
-| `nullclaw-linux-musl` | no | Cross-compiled binary |
+| `krustyklaw-linux-musl` | no | Cross-compiled binary |

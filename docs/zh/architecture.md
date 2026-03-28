@@ -1,10 +1,10 @@
 # 架构总览
 
-NullClaw 采用 vtable 可插拔架构。多数能力通过接口实现并在工厂注册，不需要改核心调用链。
+KrustyKlaw 采用 vtable 可插拔架构。多数能力通过接口实现并在工厂注册，不需要改核心调用链。
 
 ## 页面导航
 
-- 这页适合谁：想理解 NullClaw 模块边界、扩展点和实现取舍的开发者与维护者。
+- 这页适合谁：想理解 KrustyKlaw 模块边界、扩展点和实现取舍的开发者与维护者。
 - 看完去哪里：准备改代码看 [开发指南](./development.md)；要对照运行时配置看 [配置指南](./configuration.md)；涉及高风险边界看 [安全机制](./security.md)。
 - 如果你是从某页来的：从 [README](./README.md) 来，这页提供整体脑图；从 [开发指南](./development.md) 来，这页用于补齐接口与工厂层理解；从 [安全机制](./security.md) 来，可在这里回看 `security`、`runtime`、`gateway` 所在层次。
 

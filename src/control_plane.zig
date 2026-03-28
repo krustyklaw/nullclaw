@@ -147,13 +147,13 @@ fn slashCommandName(raw_name: []const u8) []const u8 {
 }
 
 test "parseSlashCommand strips bot mention from command name" {
-    const parsed = parseSlashCommand("/model@nullclaw_bot openrouter/inception/mercury") orelse return error.TestExpectedEqual;
+    const parsed = parseSlashCommand("/model@krustyklaw_bot openrouter/inception/mercury") orelse return error.TestExpectedEqual;
     try std.testing.expectEqualStrings("model", parsed.name);
     try std.testing.expectEqualStrings("openrouter/inception/mercury", parsed.arg);
 }
 
 test "parseSlashCommand strips bot mention with colon separator" {
-    const parsed = parseSlashCommand("/model@nullclaw_bot: gpt-5.2") orelse return error.TestExpectedEqual;
+    const parsed = parseSlashCommand("/model@krustyklaw_bot: gpt-5.2") orelse return error.TestExpectedEqual;
     try std.testing.expectEqualStrings("model", parsed.name);
     try std.testing.expectEqualStrings("gpt-5.2", parsed.arg);
 }
@@ -163,7 +163,7 @@ test "isStopLikeCommand matches stop and abort variants" {
     try std.testing.expect(isStopLikeCommand("  /stop  "));
     try std.testing.expect(isStopLikeCommand("/abort"));
     try std.testing.expect(isStopLikeCommand("/STOP"));
-    try std.testing.expect(isStopLikeCommand("/abort@nullclaw_bot"));
+    try std.testing.expect(isStopLikeCommand("/abort@krustyklaw_bot"));
     try std.testing.expect(isStopLikeCommand("/stop: now"));
     try std.testing.expect(isStopLikeCommand("/abort please"));
 }

@@ -1505,25 +1505,25 @@ fn envOrDefault(allocator: std.mem.Allocator, name: []const u8, default_value: [
 }
 
 fn loadClickHouseIntegrationConfig(allocator: std.mem.Allocator) !?ClickHouseIntegrationConfig {
-    const enabled_raw = std.process.getEnvVarOwned(allocator, "NULLCLAW_TEST_CLICKHOUSE") catch |err| switch (err) {
+    const enabled_raw = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => return null,
         else => return err,
     };
     defer allocator.free(enabled_raw);
     if (!isTruthy(enabled_raw)) return null;
 
-    const host = try envOrDefault(allocator, "NULLCLAW_TEST_CLICKHOUSE_HOST", "127.0.0.1");
+    const host = try envOrDefault(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_HOST", "127.0.0.1");
     errdefer allocator.free(host);
-    const database = try envOrDefault(allocator, "NULLCLAW_TEST_CLICKHOUSE_DATABASE", "default");
+    const database = try envOrDefault(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_DATABASE", "default");
     errdefer allocator.free(database);
-    const table = try envOrDefault(allocator, "NULLCLAW_TEST_CLICKHOUSE_TABLE", "memories");
+    const table = try envOrDefault(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_TABLE", "memories");
     errdefer allocator.free(table);
-    const user = try envOrDefault(allocator, "NULLCLAW_TEST_CLICKHOUSE_USER", "");
+    const user = try envOrDefault(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_USER", "");
     errdefer allocator.free(user);
-    const password = try envOrDefault(allocator, "NULLCLAW_TEST_CLICKHOUSE_PASSWORD", "");
+    const password = try envOrDefault(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_PASSWORD", "");
     errdefer allocator.free(password);
 
-    const port_raw = std.process.getEnvVarOwned(allocator, "NULLCLAW_TEST_CLICKHOUSE_PORT") catch |err| switch (err) {
+    const port_raw = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_PORT") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => null,
         else => return err,
     };
@@ -1533,7 +1533,7 @@ fn loadClickHouseIntegrationConfig(allocator: std.mem.Allocator) !?ClickHouseInt
     else
         8123;
 
-    const https_raw = std.process.getEnvVarOwned(allocator, "NULLCLAW_TEST_CLICKHOUSE_USE_HTTPS") catch |err| switch (err) {
+    const https_raw = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_TEST_CLICKHOUSE_USE_HTTPS") catch |err| switch (err) {
         error.EnvironmentVariableNotFound => null,
         else => return err,
     };

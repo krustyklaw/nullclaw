@@ -1001,7 +1001,7 @@ const LINUX_SELF_EXE_PATH = "/proc/self/exe";
 const DELETED_EXE_SUFFIX = " (deleted)";
 
 fn pathAgentExecutableName() []const u8 {
-    return if (comptime builtin.os.tag == .windows) "nullclaw.exe" else "nullclaw";
+    return if (comptime builtin.os.tag == .windows) "krustyklaw.exe" else "krustyklaw";
 }
 
 fn hasTimeoutExpired(start_ns: i128, timeout_secs: u64) bool {
@@ -1171,7 +1171,7 @@ fn runAgentJob(
                     }
                 }
 
-                // Cross-platform fallback: try resolving `nullclaw` from PATH.
+                // Cross-platform fallback: try resolving `krustyklaw` from PATH.
                 // Useful when self-exe path is stale or inaccessible outside Linux.
                 if (!tried_path_exec) {
                     exec_path = pathAgentExecutableName();
@@ -1651,18 +1651,18 @@ const JsonCronJob = struct {
     delivery_to: ?[]const u8 = null,
 };
 
-/// Get the default cron.json path: ~/.nullclaw/cron.json
+/// Get the default cron.json path: ~/.krustyklaw/cron.json
 fn cronJsonPath(allocator: std.mem.Allocator) ![]const u8 {
     const home = try platform.getHomeDir(allocator);
     defer allocator.free(home);
-    return std.fs.path.join(allocator, &.{ home, ".nullclaw", "cron.json" });
+    return std.fs.path.join(allocator, &.{ home, ".krustyklaw", "cron.json" });
 }
 
-/// Ensure the ~/.nullclaw directory exists.
+/// Ensure the ~/.krustyklaw directory exists.
 fn ensureCronDir(allocator: std.mem.Allocator) !void {
     const home = try platform.getHomeDir(allocator);
     defer allocator.free(home);
-    const dir = try std.fs.path.join(allocator, &.{ home, ".nullclaw" });
+    const dir = try std.fs.path.join(allocator, &.{ home, ".krustyklaw" });
     defer allocator.free(dir);
     std.fs.makeDirAbsolute(dir) catch |err| switch (err) {
         error.PathAlreadyExists => {},
@@ -1670,7 +1670,7 @@ fn ensureCronDir(allocator: std.mem.Allocator) !void {
     };
 }
 
-/// Save scheduler jobs to ~/.nullclaw/cron.json.
+/// Save scheduler jobs to ~/.krustyklaw/cron.json.
 pub fn saveJobs(scheduler: *const CronScheduler) !void {
     try ensureCronDir(scheduler.allocator);
     const path = try cronJsonPath(scheduler.allocator);
@@ -1792,12 +1792,12 @@ pub fn saveJobs(scheduler: *const CronScheduler) !void {
     try writeFileAtomic(scheduler.allocator, path, buf.items);
 }
 
-/// Load jobs from ~/.nullclaw/cron.json into the scheduler.
+/// Load jobs from ~/.krustyklaw/cron.json into the scheduler.
 pub fn loadJobs(scheduler: *CronScheduler) !void {
     try loadJobsWithPolicy(scheduler, .best_effort);
 }
 
-/// Load jobs from ~/.nullclaw/cron.json; unlike loadJobs, this returns
+/// Load jobs from ~/.krustyklaw/cron.json; unlike loadJobs, this returns
 /// parse/read errors (except missing file/path).
 pub fn loadJobsStrict(scheduler: *CronScheduler) !void {
     try loadJobsWithPolicy(scheduler, .strict);
@@ -1867,12 +1867,12 @@ fn trimOwnedRight(allocator: std.mem.Allocator, raw: []u8) ?[]u8 {
     return owned;
 }
 
-/// Try to read the gateway URL from ~/.nullclaw/daemon_state.json.
+/// Try to read the gateway URL from ~/.krustyklaw/daemon_state.json.
 /// Returns an allocated string like "http://127.0.0.1:3000" or null.
 fn readGatewayUrl(allocator: std.mem.Allocator) ?[]const u8 {
     const home = platform.getHomeDir(allocator) catch return null;
     defer allocator.free(home);
-    const state_path = std.fs.path.join(allocator, &.{ home, ".nullclaw", "daemon_state.json" }) catch return null;
+    const state_path = std.fs.path.join(allocator, &.{ home, ".krustyklaw", "daemon_state.json" }) catch return null;
     defer allocator.free(state_path);
 
     const content = fs_compat.readFileAlloc(std.fs.cwd(), allocator, state_path, 64 * 1024) catch return null;
@@ -1894,11 +1894,11 @@ fn readGatewayUrl(allocator: std.mem.Allocator) ?[]const u8 {
     return std.fmt.allocPrint(allocator, "http://{s}", .{host_port}) catch null;
 }
 
-/// Read the paired bearer token from ~/.nullclaw/paired_token (if present).
+/// Read the paired bearer token from ~/.krustyklaw/paired_token (if present).
 fn readPairedToken(allocator: std.mem.Allocator) ?[]const u8 {
     const home = platform.getHomeDir(allocator) catch return null;
     defer allocator.free(home);
-    const token_path = std.fs.path.join(allocator, &.{ home, ".nullclaw", "paired_token" }) catch return null;
+    const token_path = std.fs.path.join(allocator, &.{ home, ".krustyklaw", "paired_token" }) catch return null;
     defer allocator.free(token_path);
     const raw = fs_compat.readFileAlloc(std.fs.cwd(), allocator, token_path, 4096) catch return null;
     return trimOwnedRight(allocator, raw);
@@ -2044,24 +2044,24 @@ pub fn cliListJobs(allocator: std.mem.Allocator) !void {
     if (sched_status.config_probe_error) |err_name| {
         log.warn("Cannot inspect scheduler config: {s}", .{err_name});
     } else if (!sched_status.config_exists) {
-        log.warn("Config file not found. Run `nullclaw onboard` first.", .{});
+        log.warn("Config file not found. Run `krustyklaw onboard` first.", .{});
     } else if (!sched_status.scheduler_enabled) {
         log.warn("Cron scheduler is DISABLED in config. Jobs will not run automatically.", .{});
         log.warn("Enable with: scheduler.enabled = true in config, then restart daemon.", .{});
     } else if (!sched_status.daemon_state_present) {
         log.warn("Daemon state file not found. Cron jobs will not run until the daemon starts.", .{});
-        log.warn("Start with: nullclaw gateway or nullclaw service start", .{});
+        log.warn("Start with: krustyklaw gateway or krustyklaw service start", .{});
     }
 
     const jobs = scheduler.listJobs();
     if (jobs.len == 0) {
         log.info("No scheduled tasks yet.", .{});
         log.info("Usage:", .{});
-        log.info("  nullclaw cron add '*/10 * * * *' 'echo hello'", .{});
-        log.info("  nullclaw cron once 30m 'echo reminder'", .{});
+        log.info("  krustyklaw cron add '*/10 * * * *' 'echo hello'", .{});
+        log.info("  krustyklaw cron once 30m 'echo reminder'", .{});
         if (sched_status.config_exists and sched_status.scheduler_enabled and sched_status.daemon_state_present) {
             log.info("Scheduler is configured and has written a state file.", .{});
-            log.info("Run `nullclaw doctor` to verify live daemon health.", .{});
+            log.info("Run `krustyklaw doctor` to verify live daemon health.", .{});
         }
         return;
     }
@@ -2103,15 +2103,15 @@ pub fn cliStatus(allocator: std.mem.Allocator) !void {
     log.info("  Daemon state file: {s}", .{if (sched_status.daemon_state_present) "present" else "missing"});
 
     if (!sched_status.config_exists) {
-        log.info("  Status: missing configuration; run `nullclaw onboard` first", .{});
+        log.info("  Status: missing configuration; run `krustyklaw onboard` first", .{});
     } else if (!sched_status.scheduler_enabled) {
         log.info("  Status: scheduler disabled in config", .{});
         log.info("  Fix: Set scheduler.enabled = true in config, then restart", .{});
     } else if (!sched_status.daemon_state_present) {
         log.info("  Status: no daemon state file found yet", .{});
-        log.info("  Fix: Start daemon with `nullclaw gateway` or `nullclaw service start`", .{});
+        log.info("  Fix: Start daemon with `krustyklaw gateway` or `krustyklaw service start`", .{});
     } else {
-        log.info("  Status: configured; run `nullclaw doctor` for live daemon health", .{});
+        log.info("  Status: configured; run `krustyklaw doctor` for live daemon health", .{});
     }
 
     // Show job count
@@ -2934,7 +2934,7 @@ test "resolveRunnableCwd keeps valid cwd" {
 }
 
 test "resolveRunnableCwd returns null for missing cwd" {
-    const resolved = resolveRunnableCwd("__nullclaw_missing_cwd_for_cron_tests__/subdir");
+    const resolved = resolveRunnableCwd("__krustyklaw_missing_cwd_for_cron_tests__/subdir");
     try std.testing.expect(resolved == null);
 }
 
@@ -3589,17 +3589,17 @@ test "collectChildOutputWithTimeout kills process after deadline" {
 }
 
 test "preferAgentExecPath keeps regular executable path" {
-    const input = "/home/user/bin/nullclaw";
+    const input = "/home/user/bin/krustyklaw";
     try std.testing.expectEqualStrings(input, preferAgentExecPath(input));
 }
 
 test "preferAgentExecPath uses proc self exe for deleted linux path" {
     if (comptime builtin.os.tag != .linux) return;
-    try std.testing.expectEqualStrings(LINUX_SELF_EXE_PATH, preferAgentExecPath("/tmp/nullclaw (deleted)"));
+    try std.testing.expectEqualStrings(LINUX_SELF_EXE_PATH, preferAgentExecPath("/tmp/krustyklaw (deleted)"));
 }
 
 test "pathAgentExecutableName returns platform command name" {
-    const expected = if (comptime builtin.os.tag == .windows) "nullclaw.exe" else "nullclaw";
+    const expected = if (comptime builtin.os.tag == .windows) "krustyklaw.exe" else "krustyklaw";
     try std.testing.expectEqualStrings(expected, pathAgentExecutableName());
 }
 

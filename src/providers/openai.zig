@@ -602,7 +602,7 @@ test "provider getName returns OpenAI" {
 }
 
 test "validateUserAgent rejects CRLF injection" {
-    try std.testing.expect(OpenAiProvider.validateUserAgent("nullclaw/1.0"));
+    try std.testing.expect(OpenAiProvider.validateUserAgent("krustyklaw/1.0"));
     try std.testing.expect(!OpenAiProvider.validateUserAgent("bad\r\nX-Test: 1"));
 }
 

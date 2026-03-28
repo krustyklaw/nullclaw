@@ -45,11 +45,11 @@ git config core.hooksPath .githooks
 
 ## Project Overview
 
-NullClaw is an autonomous AI assistant runtime written in Zig 0.15.2. Hard constraints: 678 KB binary, ~1 MB peak RSS, <2 ms startup. Every dependency and abstraction has a measurable size/memory cost. Only two external dependencies: vendored SQLite (with build-time SHA256 hash verification) and `websocket.zig` (pinned commit).
+KrustyKlaw is an autonomous AI assistant runtime written in Zig 0.15.2. Hard constraints: 678 KB binary, ~1 MB peak RSS, <2 ms startup. Every dependency and abstraction has a measurable size/memory cost. Only two external dependencies: vendored SQLite (with build-time SHA256 hash verification) and `websocket.zig` (pinned commit).
 
 ## Architecture
 
-The entire codebase is **vtable-driven**. All major subsystems use `ptr: *anyopaque` + `vtable: *const VTable` for pluggable implementations. Extending NullClaw means implementing a vtable struct and registering it in the subsystem's factory (see `AGENTS.md` section 7 for playbooks).
+The entire codebase is **vtable-driven**. All major subsystems use `ptr: *anyopaque` + `vtable: *const VTable` for pluggable implementations. Extending KrustyKlaw means implementing a vtable struct and registering it in the subsystem's factory (see `AGENTS.md` section 7 for playbooks).
 
 **Critical ownership rule**: callers must OWN the implementing struct (local var or heap-alloc). Never return a vtable interface pointing to a temporary -- the pointer will dangle.
 
@@ -67,7 +67,7 @@ Defined in `src/root.zig`. Phases mirror deployment dependencies:
 
 - `src/main.zig` - CLI command routing (`agent`, `gateway`, `onboard`, `doctor`, `status`, `service`, `cron`, `channel`, `memory`, `skills`, `hardware`, `migrate`, `workspace`, `capabilities`, `models`, `auth`, `update`, `history`)
 - `src/root.zig` - Module hierarchy and public API exports (also serves as library root)
-- `src/config.zig` - JSON config loading (~30 sub-config structs from `config_types.zig`, loads from `~/.nullclaw/config.json`)
+- `src/config.zig` - JSON config loading (~30 sub-config structs from `config_types.zig`, loads from `~/.krustyklaw/config.json`)
 - `src/agent.zig` - Agent orchestration (delegates to `src/agent/root.zig`)
 - `src/gateway.zig` - HTTP gateway server (rate limiting, pairing, webhooks)
 - `src/daemon.zig` - Supervisor with exponential backoff for gateway mode
@@ -87,7 +87,7 @@ Concrete implementations depend inward on vtable interfaces, config, and util. N
 
 ## Config System
 
-Config loads from `~/.nullclaw/config.json`. Runtime behavior is then adjusted by `NULLCLAW_*` environment overrides (see `Config.applyEnvOverrides()` in `src/config.zig`). Types are defined in `src/config_types.zig` and re-exported from `src/config.zig`.
+Config loads from `~/.krustyklaw/config.json`. Runtime behavior is then adjusted by `KRUSTYKLAW_*` environment overrides (see `Config.applyEnvOverrides()` in `src/config.zig`). Types are defined in `src/config_types.zig` and re-exported from `src/config.zig`.
 
 `Config.load()` heap-allocates an internal `ArenaAllocator`. Always call `defer cfg.deinit()` to free. In tests, wrap in a parent arena:
 

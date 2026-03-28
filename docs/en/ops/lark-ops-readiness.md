@@ -15,8 +15,8 @@ This guide defines channel-specific operations checks for Lark/Feishu.
 
 ## Fast Triage for `error.LarkApiError`
 
-1. Run `nullclaw doctor` to confirm the channel config is structurally valid.
-2. Run `nullclaw channel status` after startup to confirm whether the channel is running but disconnected.
+1. Run `krustyklaw doctor` to confirm the channel config is structurally valid.
+2. Run `krustyklaw channel status` after startup to confirm whether the channel is running but disconnected.
 3. Treat repeated `warning(lark): lark websocket cycle failed: error.LarkApiError` as one of:
    - missing Lark/Feishu app permissions or scopes
    - wrong regional endpoint selection (`use_feishu`)

@@ -1,10 +1,10 @@
 # Termux 指南
 
-本页专门讲 Android / Termux 下运行 NullClaw 的实际路径。
+本页专门讲 Android / Termux 下运行 KrustyKlaw 的实际路径。
 
 ## 页面导航
 
-- 这页适合谁：想直接在 Android 手机的 Termux 里构建和运行 NullClaw 的用户。
+- 这页适合谁：想直接在 Android 手机的 Termux 里构建和运行 KrustyKlaw 的用户。
 - 看完去哪里：二进制能跑起来后，继续看 [配置指南](./configuration.md)；准备验证常用命令时看 [使用与运维](./usage.md)。
 - 如果你想先看完整安装矩阵：先回到 [安装指南](./installation.md)。
 
@@ -21,7 +21,7 @@ Termux 不太适合：
 - 手机上直接跑高负载、本地推理
 - 必须长期稳定常驻后台的服务
 
-如果 Android 因为内存压力杀掉进程，这通常是 Android / Termux 的运行约束，不一定是 NullClaw 自身的 bug。
+如果 Android 因为内存压力杀掉进程，这通常是 Android / Termux 的运行约束，不一定是 KrustyKlaw 自身的 bug。
 
 ## 前置要求
 
@@ -42,11 +42,11 @@ zig version
 ```bash
 pkg update
 pkg install git zig
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig version
 zig build -Doptimize=ReleaseSmall
-./zig-out/bin/nullclaw --help
+./zig-out/bin/krustyklaw --help
 ```
 
 说明：
@@ -81,7 +81,7 @@ zig build -Doptimize=ReleaseSmall -Dengines=markdown,memory
 build.zig.zon:2:14: error: expected string literal
 ```
 
-最常见原因是 Zig 版本不对，不是 NullClaw 源码本身有问题。
+最常见原因是 Zig 版本不对，不是 KrustyKlaw 源码本身有问题。
 
 排查顺序：
 
@@ -96,8 +96,8 @@ build.zig.zon:2:14: error: expected string literal
 编译通过后，先验证最基础的两个入口：
 
 ```bash
-./zig-out/bin/nullclaw agent
-./zig-out/bin/nullclaw gateway --host 127.0.0.1 --port 3001
+./zig-out/bin/krustyklaw agent
+./zig-out/bin/krustyklaw gateway --host 127.0.0.1 --port 3001
 ```
 
 先跑前台，再考虑脚本包装、常驻后台或者别的自动化方式。

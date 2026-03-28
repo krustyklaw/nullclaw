@@ -36,10 +36,10 @@ runtime that can still send messages but is not receiving inbound events.
    from the same DingTalk app.
 3. Check `allow_from` is not empty. `allow_from: []` denies all inbound
    messages.
-4. Start the runtime with `nullclaw gateway` and confirm
-   `nullclaw channel status` shows DingTalk as healthy.
+4. Start the runtime with `krustyklaw gateway` and confirm
+   `krustyklaw channel status` shows DingTalk as healthy.
 5. If credentials are suspect, run
-   `nullclaw --probe-channel-health --channel dingtalk --account <id>` to
+   `krustyklaw --probe-channel-health --channel dingtalk --account <id>` to
    validate token acquisition.
 
 ## If Inbound Messages Never Arrive
@@ -48,7 +48,7 @@ runtime that can still send messages but is not receiving inbound events.
    current runtime opens a websocket via DingTalk's gateway connection API;
    outbound-only setup is not enough.
 2. Confirm the app is subscribed to the message events you expect to receive.
-   If DingTalk never emits those callbacks, nullclaw has nothing to ingest.
+   If DingTalk never emits those callbacks, krustyklaw has nothing to ingest.
 3. Run in the foreground and capture the first DingTalk error before restarting.
    The most relevant log lines are `dingtalk websocket cycle failed`,
    `dingtalk websocket read failed`, and
@@ -59,7 +59,7 @@ runtime that can still send messages but is not receiving inbound events.
 ## Reply Target and Fallback Behavior
 
 - Fresh reply targets use the `sessionWebhook` URL attached to an inbound event.
-- If a group reply target expires, nullclaw can fall back to DingTalk AI
+- If a group reply target expires, krustyklaw can fall back to DingTalk AI
   interaction APIs using the cached conversation id.
 - Direct-message reply targets do not have that group fallback; once the session
   webhook expires, you need a fresh inbound event or a proactive target.
@@ -69,10 +69,10 @@ runtime that can still send messages but is not receiving inbound events.
 ## Recommended Validation Sequence
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
-nullclaw gateway
+krustyklaw doctor
+krustyklaw status
+krustyklaw channel status
+krustyklaw gateway
 ```
 
 Then send a DingTalk message from an allowed sender and inspect the first

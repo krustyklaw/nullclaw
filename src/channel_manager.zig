@@ -806,7 +806,7 @@ test "ChannelManager collectConfiguredChannels wires listener types accounts and
             .account_id = "ext-main",
             .runtime_name = "whatsapp_web",
             .transport = .{
-                .command = "nullclaw-plugin-whatsapp-web",
+                .command = "krustyklaw-plugin-whatsapp-web",
             },
             .plugin_config_json = "{\"allow_from\":[\"*\"]}",
         },
@@ -874,7 +874,7 @@ test "ChannelManager collectConfiguredChannels wires listener types accounts and
                 .{
                     .account_id = "irc-main",
                     .host = "irc.example.net",
-                    .nick = "nullclaw",
+                    .nick = "krustyklaw",
                 },
             },
             .imessage = &[_]@import("config_types.zig").IMessageConfig{

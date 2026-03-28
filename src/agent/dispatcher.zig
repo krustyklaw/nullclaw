@@ -1745,7 +1745,7 @@ test "parseToolCalls compact malformed close with xml-like argument content" {
 
 test "parseToolCalls compact call with no closing tag" {
     const allocator = std.testing.allocator;
-    const response = "<tool_call>file_read{\"path\": \"/home/micelio/.nullclaw/void.md\"}";
+    const response = "<tool_call>file_read{\"path\": \"/home/micelio/.krustyklaw/void.md\"}";
 
     const result = try parseToolCalls(allocator, response);
     defer {
@@ -1763,7 +1763,7 @@ test "parseToolCalls compact call with no closing tag" {
 
     const parsed_args = try std.json.parseFromSlice(std.json.Value, allocator, result.calls[0].arguments_json, .{});
     defer parsed_args.deinit();
-    try std.testing.expectEqualStrings("/home/micelio/.nullclaw/void.md", parsed_args.value.object.get("path").?.string);
+    try std.testing.expectEqualStrings("/home/micelio/.krustyklaw/void.md", parsed_args.value.object.get("path").?.string);
 }
 
 test "parseToolCalls malformed JSON inside tag" {
@@ -1993,14 +1993,14 @@ test "ToolExecutionResult default tool_call_id is null" {
 
 test "parseFunctionTagCall single parameter" {
     const allocator = std.testing.allocator;
-    const inner = "<function=shell><parameter=command>ps aux | grep nullclaw</parameter></function>";
+    const inner = "<function=shell><parameter=command>ps aux | grep krustyklaw</parameter></function>";
     const call = try parseFunctionTagCall(allocator, inner);
     defer {
         allocator.free(call.name);
         allocator.free(call.arguments_json);
     }
     try std.testing.expectEqualStrings("shell", call.name);
-    try std.testing.expect(std.mem.indexOf(u8, call.arguments_json, "ps aux | grep nullclaw") != null);
+    try std.testing.expect(std.mem.indexOf(u8, call.arguments_json, "ps aux | grep krustyklaw") != null);
     try std.testing.expect(std.mem.indexOf(u8, call.arguments_json, "command") != null);
 }
 
@@ -2047,7 +2047,7 @@ test "parseToolCalls handles function-tag format inside tool_call" {
     const response =
         \\<tool_call>
         \\<function=shell>
-        \\<parameter=command>ps aux | grep nullclaw | grep -v grep</parameter>
+        \\<parameter=command>ps aux | grep krustyklaw | grep -v grep</parameter>
         \\</function>
         \\</tool_call>
     ;
@@ -2784,7 +2784,7 @@ test "parseXmlToolCalls minimax format" {
         \\Directory already exists. Let me see what's inside:
         \\<tool_call>
         \\<invoke name="shell">
-        \\<parameter name="command">ls -la /home/micelio/.nullclaw/workspace/amelie</parameter>
+        \\<parameter name="command">ls -la /home/micelio/.krustyklaw/workspace/amelie</parameter>
         \\</invoke>
         \\</minimax:tool_call>
     ;
@@ -2810,7 +2810,7 @@ test "parseXmlToolCalls minimax format robustness" {
     const response =
         \\Cloning...
         \\<tool_call>
-        \\<invoke name="shell",<parameter name="command">ls -la /home/micelio/.nullclaw/workspace/amelie</parameter>
+        \\<invoke name="shell",<parameter name="command">ls -la /home/micelio/.krustyklaw/workspace/amelie</parameter>
         \\</invoke>
         \\</minimax:tool_call>
     ;
@@ -2858,7 +2858,7 @@ test "parseXmlToolCalls hybrid format" {
     const allocator = std.testing.allocator;
     const response =
         \\<tool_call>
-        \\{"name": "shell", <parameter name="command">ls -la /home/micelio/.nullclaw/workspace/amelie</parameter>
+        \\{"name": "shell", <parameter name="command">ls -la /home/micelio/.krustyklaw/workspace/amelie</parameter>
         \\</tool_call>
     ;
 
@@ -2908,7 +2908,7 @@ test "parseXmlToolCalls square bracket format" {
     const response =
         \\[TOOL_CALL]
         \\<invoke name="shell">
-        \\<parameter name="command">ls -la /home/micelio/.nullclaw/</parameter>
+        \\<parameter name="command">ls -la /home/micelio/.krustyklaw/</parameter>
         \\</invoke>
         \\[/TOOL_CALL]
     ;

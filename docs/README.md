@@ -1,6 +1,6 @@
-# nullclaw Documentation
+# krustyklaw Documentation
 
-This directory is the documentation index for nullclaw.
+This directory is the documentation index for krustyklaw.
 
 ## Start Here
 

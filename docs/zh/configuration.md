@@ -1,22 +1,22 @@
 # 配置指南
 
-NullClaw 与 OpenClaw 配置结构兼容，使用 `snake_case` 字段风格。
+KrustyKlaw 与 OpenClaw 配置结构兼容，使用 `snake_case` 字段风格。
 
 ## 页面导航
 
-- 这页适合谁：已经装好 NullClaw，准备生成、修改或审查 `config.json` 的使用者与运维者。
+- 这页适合谁：已经装好 KrustyKlaw，准备生成、修改或审查 `config.json` 的使用者与运维者。
 - 看完去哪里：要把配置真正跑起来看 [使用与运维](./usage.md)；要理解安全边界看 [安全机制](./security.md)；要查看命令入口与覆盖参数看 [命令参考](./commands.md)；要接非 core 渠道看 [外部渠道插件](./external-channels.md)。
 - 如果你是从某页来的：从 [安装指南](./installation.md) 来，下一步通常就是生成初始配置；从 [Gateway API](./gateway-api.md) 来，这页可回查 `gateway` 与 channel 相关字段；从 [安全机制](./security.md) 来，这页提供具体配置落点与示例。
 
 ## 配置文件位置
 
-- macOS/Linux: `~/.nullclaw/config.json`
-- Windows: `%USERPROFILE%\\.nullclaw\\config.json`
+- macOS/Linux: `~/.krustyklaw/config.json`
+- Windows: `%USERPROFILE%\\.krustyklaw\\config.json`
 
 建议先执行：
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 这会自动生成初始配置文件。
@@ -89,7 +89,7 @@ nullclaw onboard --interactive
     "log_llm_io": true,
     "otel": {
       "endpoint": "http://otel:4318",
-      "service_name": "nullclaw",
+      "service_name": "krustyklaw",
       "headers": {
         "Authorization": "Bearer example-token"
       }
@@ -133,7 +133,7 @@ nullclaw onboard --interactive
 
 ### `model_routes`
 
-- 顶层可选路由表，用于 `nullclaw agent` 在每一轮对话里自动选择模型。
+- 顶层可选路由表，用于 `krustyklaw agent` 在每一轮对话里自动选择模型。
 - 每个条目用 `hint` 映射到具体的 `provider` 和 `model`。
 - 当前 daemon 识别的路由提示词包括：`fast`、`balanced`、`deep`、`reasoning`、`vision`。
 - 配置了 `balanced` 时，它会作为常规兜底路线。`fast` 更适合简短的状态/列表/检查类请求，以及提取、计数、分类、只返回结果这类边界清晰的短结构化任务。`deep` 和 `reasoning` 更适合调查、规划、权衡分析和长上下文。`vision` 用于图片输入回合。
@@ -208,8 +208,8 @@ nullclaw onboard --interactive
 - 相对路径会相对于 `config.json` 所在目录解析。
 - 绝对路径会原样使用。
 - 配置中可以写 `/` 或 `\`，运行时会按当前操作系统规范化路径分隔符。
-- `workspace_path` 不会禁用 `system_prompt`。如果两者同时设置，nullclaw 仍会应用命名 agent 的 profile prompt，并从该独立工作区加载 bootstrap 上下文。
-- 首次使用时，如果工作区不存在，nullclaw 会自动创建并初始化：
+- `workspace_path` 不会禁用 `system_prompt`。如果两者同时设置，krustyklaw 仍会应用命名 agent 的 profile prompt，并从该独立工作区加载 bootstrap 上下文。
+- 首次使用时，如果工作区不存在，krustyklaw 会自动创建并初始化：
   - `AGENTS.md`
   - `SOUL.md`
   - `IDENTITY.md`
@@ -220,7 +220,7 @@ nullclaw onboard --interactive
 - 该 agent 的文件操作、markdown memory 文件以及 workspace 相关上下文都会使用这个工作区。
 - 设置 `workspace_path` 后，该 agent 还会获得一个持久 memory namespace，格式为 `agent:<agent-id>`。
 - 这个 namespace 会用于：
-  - `nullclaw agent --agent <id>`
+  - `krustyklaw agent --agent <id>`
   - `/subagents spawn --agent <id> ...`
   - 通过 `bindings` 路由到该命名 agent 的会话
 
@@ -263,7 +263,7 @@ nullclaw onboard --interactive
 
 ### `identity`（AIEOS v1.1）
 
-如果你希望运行时身份来自 AIEOS 文档，可以使用这一节。配置后，nullclaw 会把解析后的 AIEOS 内容连同 `AGENTS.md`、`IDENTITY.md` 等工作区身份文件一起注入 system prompt：
+如果你希望运行时身份来自 AIEOS 文档，可以使用这一节。配置后，krustyklaw 会把解析后的 AIEOS 内容连同 `AGENTS.md`、`IDENTITY.md` 等工作区身份文件一起注入 system prompt：
 
 ```json
 {
@@ -280,7 +280,7 @@ nullclaw onboard --interactive
 {
   "identity": {
     "format": "aieos",
-    "aieos_inline": "{\"identity\":{\"names\":{\"first\":\"nullclaw-assistant\"},\"bio\":\"通用自主助手\"},\"linguistics\":{\"style\":\"concise\"},\"motivations\":{\"core_drive\":\"安全地帮助操作者完成任务\"}}"
+    "aieos_inline": "{\"identity\":{\"names\":{\"first\":\"krustyklaw-assistant\"},\"bio\":\"通用自主助手\"},\"linguistics\":{\"style\":\"concise\"},\"motivations\":{\"core_drive\":\"安全地帮助操作者完成任务\"}}"
   }
 }
 ```
@@ -291,7 +291,7 @@ nullclaw onboard --interactive
 {
   "identity": {
     "names": {
-      "first": "nullclaw-assistant"
+      "first": "krustyklaw-assistant"
     },
     "bio": "通用自主助手"
   },
@@ -327,7 +327,7 @@ nullclaw onboard --interactive
         "wa-web": {
           "runtime_name": "whatsapp_web",
           "transport": {
-            "command": "nullclaw-plugin-whatsapp-web",
+            "command": "krustyklaw-plugin-whatsapp-web",
             "args": ["--stdio"],
             "timeout_ms": 10000,
             "env": {
@@ -350,9 +350,9 @@ nullclaw onboard --interactive
 完整的协议、生命周期、metadata 约定和插件作者契约，请继续看
 [外部渠道插件](./external-channels.md)。
 
-- `runtime_name` 是 nullclaw 内部使用的运行时渠道 id，routing、bindings、session key 和出站分发都会使用它。它不能复用内建 channel 名称，也不能和任何其他已配置 channel 已占用的运行时名字冲突。
+- `runtime_name` 是 krustyklaw 内部使用的运行时渠道 id，routing、bindings、session key 和出站分发都会使用它。它不能复用内建 channel 名称，也不能和任何其他已配置 channel 已占用的运行时名字冲突。
 - `transport.command` 和可选的 `transport.args` 会把插件作为子进程启动，并通过 stdio 上的逐行 JSON-RPC 通信。
-- `transport.timeout_ms` 会限制 host 到插件的 RPC 等待时间；同时 nullclaw 还会在内部对 control-plane 请求做上限裁剪，避免一个坏插件把 supervision 卡住几分钟。
+- `transport.timeout_ms` 会限制 host 到插件的 RPC 等待时间；同时 krustyklaw 还会在内部对 control-plane 请求做上限裁剪，避免一个坏插件把 supervision 卡住几分钟。
 - `transport.env` 只会传给插件进程本身。
 - `config` 必须是 JSON object；它会原样透传给插件 `start` 请求里的 `params.config`。
 - 插件必须响应 `get_manifest`，处理 `start`、`send`、`stop`；建议实现 `health`，这样 supervision 才能识别“进程活着但 sidecar 已断开”的状态。
@@ -361,18 +361,18 @@ nullclaw onboard --interactive
 - `start.params` 现在包含嵌套的 `runtime` 对象，里面有 `name`、`account_id` 和 host 提供的 `state_dir`。
 - `start.result` 必须返回 `started: true`；`send`、`send_rich`、`edit_message`、`delete_message` 以及其他 typing/message-action RPC 在真正接受动作时都必须返回 `result.accepted: true`。仅仅没有 JSON-RPC `error` 已经不够了。
 - `send.params` 现在也拆成嵌套的 `runtime` 和 `message` 对象；文本字段统一使用 `message.text`。
-- 如果插件同时声明了 `capabilities.edit=true` 和 `capabilities.delete=true`，那么 `send.result` 还可以返回 `message_id`，或者返回 `message { target?, message_id }`；这样 nullclaw 就能在不支持原生 `.chunk` 流式发送的渠道上维护一条可编辑的草稿消息。
-- 如果 `capabilities.streaming=true`，nullclaw 可能在模型流式输出时发送 `.chunk` 阶段的 `send` 事件；如果缺省或为 `false`，只会发送最终结果。
+- 如果插件同时声明了 `capabilities.edit=true` 和 `capabilities.delete=true`，那么 `send.result` 还可以返回 `message_id`，或者返回 `message { target?, message_id }`；这样 krustyklaw 就能在不支持原生 `.chunk` 流式发送的渠道上维护一条可编辑的草稿消息。
+- 如果 `capabilities.streaming=true`，krustyklaw 可能在模型流式输出时发送 `.chunk` 阶段的 `send` 事件；如果缺省或为 `false`，只会发送最终结果。
 - 如果 `capabilities.send_rich=true`，host 还可能调用 `send_rich`，其参数同样包含嵌套的 `runtime` 和 `message { target, text, attachments, choices }`。
 - 如果 `capabilities.typing=true`，host 还可能调用 `start_typing` / `stop_typing`，参数包含嵌套的 `runtime` 和 `recipient`。
 - 如果声明了 `capabilities.edit=true` / `capabilities.delete=true`，host 还可能调用 `edit_message` / `delete_message`。
 - 如果声明了 `capabilities.reactions=true` 或 `capabilities.read_receipts=true`，host 还可能调用 `set_reaction` 和 `mark_read`。
 - `inbound_message.params.message` 必须包含 `sender_id`、`chat_id`、`text`；如果带了 `metadata`，它必须是 JSON object；如果带了 `media`，它必须是由非空字符串组成的数组。
 - 如果希望 unknown channel 也能正确做 routing/bindings，建议在 `metadata` 里带上 `peer_kind` 和 `peer_id`。
-- unknown/external channel 也可以提供 `metadata.is_group`、`metadata.is_dm` 或 `metadata.typing_recipient`，nullclaw 会把这些信息提升到 prompt 的 conversation context 和处理状态路由里。
-- PR #265 的 WhatsApp Web bridge 兼容适配器示例放在 `examples/whatsapp-web/nullclaw-plugin-whatsapp-web`。
-- 生产级的配套仓库已经移到仓库外：[nullclaw/nullclaw-channel-baileys](https://github.com/nullclaw/nullclaw-channel-baileys) 和 [nullclaw/nullclaw-channel-whatsmeow-bridge](https://github.com/nullclaw/nullclaw-channel-whatsmeow-bridge)。
-- `nullclaw channel start external` 会启动第一个已配置的外部账号；`nullclaw channel start <runtime_name>` 可以直接启动某个具体运行时名字，比如 `whatsapp_web`。
+- unknown/external channel 也可以提供 `metadata.is_group`、`metadata.is_dm` 或 `metadata.typing_recipient`，krustyklaw 会把这些信息提升到 prompt 的 conversation context 和处理状态路由里。
+- PR #265 的 WhatsApp Web bridge 兼容适配器示例放在 `examples/whatsapp-web/krustyklaw-plugin-whatsapp-web`。
+- 生产级的配套仓库已经移到仓库外：[krustyklaw/krustyklaw-channel-baileys](https://github.com/krustyklaw/krustyklaw-channel-baileys) 和 [krustyklaw/krustyklaw-channel-whatsmeow-bridge](https://github.com/krustyklaw/krustyklaw-channel-whatsmeow-bridge)。
+- `krustyklaw channel start external` 会启动第一个已配置的外部账号；`krustyklaw channel start <runtime_name>` 可以直接启动某个具体运行时名字，比如 `whatsapp_web`。
 
 Telegram 示例：
 
@@ -489,9 +489,9 @@ Telegram forum topics：
 操作流程：
 
 - 在目标 forum topic 中发送 `/bind coder`。
-- `nullclaw` 会为该 topic 和 Telegram account 写入一条新的精确 `bindings[]` 条目到 `~/.nullclaw/config.json`。
+- `krustyklaw` 会为该 topic 和 Telegram account 写入一条新的精确 `bindings[]` 条目到 `~/.krustyklaw/config.json`。
 - 该 topic 中的下一条消息将使用新路由的 agent 配置。
-- `nullclaw` 必须对 `~/.nullclaw/config.json` 有写权限，`/bind` 才能持久化变更。
+- `krustyklaw` 必须对 `~/.krustyklaw/config.json` 有写权限，`/bind` 才能持久化变更。
 
 关于 `account_id`：
 
@@ -499,7 +499,7 @@ Telegram forum topics：
 - 在标准 `channels.telegram.accounts` 布局中，对象 key 就是 account id。例如 `accounts.main` 意味着 `account_id = "main"`。
 - `bindings` 中的 `match.account_id` 将 binding 限定到某个特定 Telegram 账号。
 - 如果省略 `match.account_id`，该 binding 可匹配该 channel 下的任意 Telegram 账号。
-- 只有同一个 nullclaw 实例运行多个 Telegram bot 账号/token 时，不同 account id 才有意义。
+- 只有同一个 krustyklaw 实例运行多个 Telegram bot 账号/token 时，不同 account id 才有意义。
 
 ### Web UI / Browser Relay
 
@@ -599,7 +599,7 @@ Max 说明：
 - 多账号 webhook 场景下，每个账号应使用独立的 `webhook_secret` 或在 webhook URL 中使用独立的 `account_id` query，例如 `/max?account_id=main`。
 - `allow_from` 和 `group_allow_from` 接受 Max `user_id` 或用户名。`user_id` 是更稳定的选择。
 - `require_mention = true` 仅影响群聊。私聊和 `bot_started` deep link 不受影响。
-- Max inline button 在 nullclaw 中是一次性的：有效点击后原始键盘会被清除，避免过期按钮。
+- Max inline button 在 krustyklaw 中是一次性的：有效点击后原始键盘会被清除，避免过期按钮。
 
 ### `memory`
 
@@ -714,15 +714,15 @@ Max 说明：
 每次改完配置建议执行：
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
+krustyklaw doctor
+krustyklaw status
+krustyklaw channel status
 ```
 
 如果你修改了 gateway 或 channel，额外执行：
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 ```
 
 确认服务能正常启动且日志无错误。

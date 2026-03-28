@@ -844,11 +844,11 @@ fn appendSkillsSection(
     w: anytype,
     workspace_dir: []const u8,
 ) !void {
-    // Two-source loading: workspace skills + ~/.nullclaw/skills/
+    // Two-source loading: workspace skills + ~/.krustyklaw/skills/
     const home_dir = platform.getHomeDir(allocator) catch null;
     defer if (home_dir) |h| allocator.free(h);
     const community_base = if (home_dir) |h|
-        std.fs.path.join(allocator, &.{ h, ".nullclaw" }) catch null
+        std.fs.path.join(allocator, &.{ h, ".krustyklaw" }) catch null
     else
         null;
     defer if (community_base) |cb| allocator.free(cb);
@@ -2115,14 +2115,14 @@ test "appendSkillsSection with no skills produces nothing" {
     var buf: std.ArrayListUnmanaged(u8) = .empty;
     defer buf.deinit(allocator);
     const w = buf.writer(allocator);
-    try appendSkillsSection(allocator, w, "/tmp/nullclaw-prompt-test-no-skills");
+    try appendSkillsSection(allocator, w, "/tmp/krustyklaw-prompt-test-no-skills");
 
     try std.testing.expectEqual(@as(usize, 0), buf.items.len);
 }
 
 test "buildSkillsSection with no skills returns empty" {
     const allocator = std.testing.allocator;
-    const content = try buildSkillsSection(allocator, "/tmp/nullclaw-prompt-test-no-skills-wrapper");
+    const content = try buildSkillsSection(allocator, "/tmp/krustyklaw-prompt-test-no-skills-wrapper");
     defer allocator.free(content);
     try std.testing.expectEqual(@as(usize, 0), content.len);
 }
@@ -2316,7 +2316,7 @@ test "appendSkillsSection renders unavailable skill with missing deps" {
     {
         const f = try tmp.dir.createFile("skills/docker-deploy/skill.json", .{});
         defer f.close();
-        try f.writeAll("{\"name\": \"docker-deploy\", \"description\": \"Deploy with docker\", \"requires_bins\": [\"nullclaw_fake_docker_xyz\"], \"requires_env\": [\"NULLCLAW_FAKE_TOKEN_XYZ\"]}");
+        try f.writeAll("{\"name\": \"docker-deploy\", \"description\": \"Deploy with docker\", \"requires_bins\": [\"krustyklaw_fake_docker_xyz\"], \"requires_env\": [\"KRUSTYKLAW_FAKE_TOKEN_XYZ\"]}");
     }
 
     const base = try tmp.dir.realpathAlloc(allocator, ".");
@@ -2350,7 +2350,7 @@ test "appendSkillsSection unavailable always=true skill renders in XML not full"
     {
         const f = try tmp.dir.createFile("skills/broken-always/skill.json", .{});
         defer f.close();
-        try f.writeAll("{\"name\": \"broken-always\", \"description\": \"Broken always skill\", \"always\": true, \"requires_bins\": [\"nullclaw_nonexistent_xyz_aaa\"]}");
+        try f.writeAll("{\"name\": \"broken-always\", \"description\": \"Broken always skill\", \"always\": true, \"requires_bins\": [\"krustyklaw_nonexistent_xyz_aaa\"]}");
     }
     {
         const f = try tmp.dir.createFile("skills/broken-always/SKILL.md", .{});

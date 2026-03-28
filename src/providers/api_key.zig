@@ -38,7 +38,7 @@ const QWEN_OAUTH_CLIENT_ID = "f0304373b74a44d2b584a3fb70ca9e56";
 /// 1. Explicitly provided `api_key` parameter (trimmed, filtered if empty)
 /// 2. For `qwen-portal` only: `QWEN_OAUTH_TOKEN`, then `~/.qwen/oauth_creds.json`
 /// 3. Provider-specific environment variable
-/// 4. Generic fallback variables (`NULLCLAW_API_KEY`, `API_KEY`)
+/// 4. Generic fallback variables (`KRUSTYKLAW_API_KEY`, `API_KEY`)
 pub fn resolveApiKey(
     allocator: std.mem.Allocator,
     provider_name: []const u8,
@@ -74,7 +74,7 @@ pub fn resolveApiKey(
     }
 
     // 4. Generic fallbacks
-    const fallbacks = [_][]const u8{ "NULLCLAW_API_KEY", "API_KEY" };
+    const fallbacks = [_][]const u8{ "KRUSTYKLAW_API_KEY", "API_KEY" };
     for (fallbacks) |env_var| {
         if (try loadNonEmptyEnv(allocator, env_var)) |value| {
             return value;
@@ -352,7 +352,7 @@ fn providerEnvCandidates(name: []const u8) [3][]const u8 {
 /// Resolve API key with config providers as first priority, then env vars:
 ///   1. providers[].api_key from config
 ///   2. Provider-specific env var (GROQ_API_KEY, etc.)
-///   3. Generic fallbacks (NULLCLAW_API_KEY, API_KEY)
+///   3. Generic fallbacks (KRUSTYKLAW_API_KEY, API_KEY)
 pub fn resolveApiKeyFromConfig(
     allocator: std.mem.Allocator,
     provider_name: []const u8,

@@ -121,7 +121,7 @@ fn isRemoteMediaUrl(url: []const u8) bool {
     return std.mem.startsWith(u8, trimmed, "https://") or std.mem.startsWith(u8, trimmed, "http://");
 }
 
-const QQ_ATTACHMENT_CACHE_SUBDIR = "nullclaw_qq_media";
+const QQ_ATTACHMENT_CACHE_SUBDIR = "krustyklaw_qq_media";
 const QQ_ATTACHMENT_MAX_BYTES: usize = 20 * 1024 * 1024;
 
 fn imageExtensionFromContentType(content_type: []const u8) []const u8 {

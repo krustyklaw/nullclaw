@@ -173,7 +173,7 @@ fn recordGatewayFailure(err: anyerror, state: *DaemonState) void {
 fn logGatewayFailure(err: anyerror, port: u16) void {
     switch (err) {
         error.AddressInUse => {
-            log.err("Gateway failed to start: port {d} is already in use. Is another nullclaw instance running?", .{port});
+            log.err("Gateway failed to start: port {d} is already in use. Is another krustyklaw instance running?", .{port});
         },
         else => {
             log.err("Gateway failed to start: {}", .{err});
@@ -1144,7 +1144,7 @@ fn startConfiguredTunnel(
     }
 }
 
-/// Run the long-lived runtime. This is the main entry point for `nullclaw gateway`.
+/// Run the long-lived runtime. This is the main entry point for `krustyklaw gateway`.
 /// Spawns threads for gateway, heartbeat, and channels, then loops until
 /// shutdown is requested (Ctrl+C signal or explicit request).
 /// `host` and `port` are CLI-parsed values that override `config.gateway`.
@@ -1183,7 +1183,7 @@ pub fn run(allocator: std.mem.Allocator, config: *const Config, host: []const u8
     var stdout_buf: [4096]u8 = undefined;
     var bw = std.fs.File.stdout().writer(&stdout_buf);
     const stdout = &bw.interface;
-    try stdout.print("nullclaw gateway runtime started\n", .{});
+    try stdout.print("krustyklaw gateway runtime started\n", .{});
     try stdout.print("  Gateway:  http://{s}:{d}\n", .{ state.gateway_host, state.gateway_port });
     if (state.tunnel_url) |url| {
         try stdout.print("  Tunnel:   {s} ({s})\n", .{ url, state.tunnel_provider });
@@ -1326,7 +1326,7 @@ pub fn run(allocator: std.mem.Allocator, config: *const Config, host: []const u8
         t.stop();
     }
 
-    try stdout.print("nullclaw gateway runtime stopped.\n", .{});
+    try stdout.print("krustyklaw gateway runtime stopped.\n", .{});
 }
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -2437,12 +2437,12 @@ test "hasSupervisedChannels true for nostr" {
 test "stateFilePath derives from config_path" {
     const config = Config{
         .workspace_dir = "/tmp/workspace",
-        .config_path = "/home/user/.nullclaw/config.json",
+        .config_path = "/home/user/.krustyklaw/config.json",
         .allocator = std.testing.allocator,
     };
     const path = try stateFilePath(std.testing.allocator, &config);
     defer std.testing.allocator.free(path);
-    const expected = try std.fs.path.join(std.testing.allocator, &.{ "/home/user/.nullclaw", "daemon_state.json" });
+    const expected = try std.fs.path.join(std.testing.allocator, &.{ "/home/user/.krustyklaw", "daemon_state.json" });
     defer std.testing.allocator.free(expected);
     try std.testing.expectEqualStrings(expected, path);
 }

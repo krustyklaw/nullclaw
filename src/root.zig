@@ -1,4 +1,4 @@
-//! nullclaw — The smallest AI assistant. Zig-powered.
+//! krustyklaw — The smallest AI assistant. Zig-powered.
 //!
 //! Module hierarchy mirrors ZeroClaw's Rust architecture:
 //!   agent, channels, config, cron, daemon, doctor, gateway,
@@ -78,6 +78,7 @@ pub const multimodal = @import("multimodal.zig");
 pub const agent_routing = @import("agent_routing.zig");
 
 // Phase 5: Hardware & Integrations
+pub const desktop = @import("desktop.zig");
 pub const hardware = @import("hardware.zig");
 pub const integrations = @import("integrations.zig");
 pub const peripherals = @import("peripherals.zig");

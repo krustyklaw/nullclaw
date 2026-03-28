@@ -4,7 +4,7 @@ This directory contains a minimal reference plugin for `channels.external`.
 
 Files:
 
-- `nullclaw-plugin-template`
+- `krustyklaw-plugin-template`
   Minimal Python 3 plugin that implements the core JSON-RPC lifecycle:
   `get_manifest`, `start`, `stop`, `health`, and `send`.
 
@@ -43,7 +43,7 @@ Example config:
         "demo": {
           "runtime_name": "demo_channel",
           "transport": {
-            "command": "/absolute/path/to/examples/external-channel-template/nullclaw-plugin-template",
+            "command": "/absolute/path/to/examples/external-channel-template/krustyklaw-plugin-template",
             "timeout_ms": 5000
           },
           "config": {
@@ -59,7 +59,7 @@ Example config:
 Start it with:
 
 ```bash
-nullclaw channel start demo_channel
+krustyklaw channel start demo_channel
 ```
 
 ## How To Extend It

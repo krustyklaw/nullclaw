@@ -1,4 +1,4 @@
-//! A2A (Agent-to-Agent) protocol support for nullclaw.
+//! A2A (Agent-to-Agent) protocol support for krustyklaw.
 //!
 //! Implements Google's Agent-to-Agent protocol v0.3.0 over JSON-RPC 2.0:
 //!   - GET /.well-known/agent-card.json -> Agent Card discovery
@@ -412,7 +412,7 @@ pub fn handleAgentCard(allocator: std.mem.Allocator, cfg: *const Config) A2aResp
     if (cfg.a2a.url.len > 0) {
         gateway.jsonEscapeInto(w, cfg.a2a.url) catch return errorResponse();
     } else {
-        w.writeAll("https://github.com/nullclaw/nullclaw") catch return errorResponse();
+        w.writeAll("https://github.com/krustyklaw/krustyklaw") catch return errorResponse();
     }
     w.writeAll("\"}") catch return errorResponse();
     w.writeAll(",\"capabilities\":{\"streaming\":true}") catch return errorResponse();

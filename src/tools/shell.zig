@@ -9,7 +9,7 @@ const isResolvedPathAllowed = @import("path_security.zig").isResolvedPathAllowed
 const SecurityPolicy = @import("../security/policy.zig").SecurityPolicy;
 const json_miniparse = @import("../json_miniparse.zig");
 const command_summary = @import("../command_summary.zig");
-const UNAVAILABLE_WORKSPACE_SENTINEL = "/__nullclaw_workspace_unavailable__";
+const UNAVAILABLE_WORKSPACE_SENTINEL = "/__krustyklaw_workspace_unavailable__";
 const log = std.log.scoped(.shell);
 
 /// Default maximum shell command execution time (nanoseconds).

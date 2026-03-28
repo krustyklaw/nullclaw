@@ -211,16 +211,16 @@ pub const WebChannel = struct {
 
     fn loadLocalTokenFromEnv(self: *WebChannel) !bool {
         return self.loadTokenFromEnvCandidates(&.{
-            "NULLCLAW_WEB_TOKEN",
-            "NULLCLAW_GATEWAY_TOKEN",
+            "KRUSTYKLAW_WEB_TOKEN",
+            "KRUSTYKLAW_GATEWAY_TOKEN",
             "OPENCLAW_GATEWAY_TOKEN",
         });
     }
 
     fn loadDedicatedRelayTokenFromEnv(self: *WebChannel) !?[]u8 {
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_RELAY_TOKEN")) |raw| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_RELAY_TOKEN")) |raw| {
             if (!config_types.WebConfig.isValidAuthToken(raw)) {
-                log.warn("Ignoring invalid relay token from env NULLCLAW_RELAY_TOKEN", .{});
+                log.warn("Ignoring invalid relay token from env KRUSTYKLAW_RELAY_TOKEN", .{});
                 self.allocator.free(raw);
                 return null;
             }
@@ -967,7 +967,7 @@ pub const WebChannel = struct {
 
         const cookie = std.fmt.allocPrint(
             self.allocator,
-            "nullclaw_ui_token={s}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={d}",
+            "krustyklaw_ui_token={s}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={d}",
             .{ access_token, self.relay_ui_token_ttl_secs },
         ) catch {
             self.sendRelayError(session_id, request_id, "pairing_internal_error", "failed to build UI cookie");
@@ -1027,7 +1027,7 @@ pub const WebChannel = struct {
 
     fn ensureLocalTokenSourceCompatible(self: *const WebChannel, token_source: LocalTokenSource) !void {
         if (self.message_auth_mode == .token and token_source == .ephemeral) {
-            log.warn("Web channel message_auth_mode=token requires stable auth token from config (channels.web.auth_token) or env (NULLCLAW_WEB_TOKEN/NULLCLAW_GATEWAY_TOKEN/OPENCLAW_GATEWAY_TOKEN)", .{});
+            log.warn("Web channel message_auth_mode=token requires stable auth token from config (channels.web.auth_token) or env (KRUSTYKLAW_WEB_TOKEN/KRUSTYKLAW_GATEWAY_TOKEN/OPENCLAW_GATEWAY_TOKEN)", .{});
             return error.InvalidConfiguration;
         }
     }
@@ -1089,7 +1089,7 @@ pub const WebChannel = struct {
         try self.setActiveToken(resolved.token);
         switch (resolved.source) {
             .config => log.info("Web relay token loaded from channels.web relay_token", .{}),
-            .env => log.info("Web relay token loaded from env NULLCLAW_RELAY_TOKEN and persisted", .{}),
+            .env => log.info("Web relay token loaded from env KRUSTYKLAW_RELAY_TOKEN and persisted", .{}),
             .stored => log.info("Web relay token loaded from persisted lifecycle store", .{}),
             .generated => log.warn("Web relay generated a new lifecycle token and persisted it", .{}),
         }
@@ -1103,7 +1103,7 @@ pub const WebChannel = struct {
         var auth_header_buf: [256]u8 = undefined;
         const auth_header = try std.fmt.bufPrint(&auth_header_buf, "Authorization: Bearer {s}", .{self.activeToken()});
         var agent_header_buf: [128]u8 = undefined;
-        const agent_header = try std.fmt.bufPrint(&agent_header_buf, "X-NullClaw-Agent: {s}", .{self.relay_agent_id});
+        const agent_header = try std.fmt.bufPrint(&agent_header_buf, "X-KrustyKlaw-Agent: {s}", .{self.relay_agent_id});
 
         const ws_ptr = try self.allocator.create(ws_client.WsClient);
         errdefer self.allocator.destroy(ws_ptr);
@@ -1899,7 +1899,7 @@ test "WebChannel wsStart rejects token mode for relay transport" {
     var ch = WebChannel.initFromConfig(std.testing.allocator, .{
         .transport = "relay",
         .message_auth_mode = "token",
-        .relay_url = "wss://relay.nullclaw.io/ws/agent",
+        .relay_url = "wss://relay.krustyklaw.io/ws/agent",
     });
     try std.testing.expectError(error.InvalidConfiguration, ch.channel().vtable.start(ch.channel().ptr));
 }
@@ -1907,12 +1907,12 @@ test "WebChannel wsStart rejects token mode for relay transport" {
 test "WebChannel initFromConfig maps relay transport settings" {
     const ch = WebChannel.initFromConfig(std.testing.allocator, .{
         .transport = "relay",
-        .relay_url = "wss://relay.nullclaw.io/ws/agent",
+        .relay_url = "wss://relay.krustyklaw.io/ws/agent",
         .relay_agent_id = "edge-1",
         .relay_token = "relay-token-123456",
     });
     try std.testing.expectEqual(WebChannel.WebTransport.relay, ch.transport);
-    try std.testing.expectEqualStrings("wss://relay.nullclaw.io/ws/agent", ch.relay_url.?);
+    try std.testing.expectEqualStrings("wss://relay.krustyklaw.io/ws/agent", ch.relay_url.?);
     try std.testing.expectEqualStrings("edge-1", ch.relay_agent_id);
     try std.testing.expectEqualStrings("relay-token-123456", ch.configured_relay_token.?);
 }
@@ -2037,22 +2037,22 @@ test "extractBearerToken parses bearer auth header" {
 }
 
 test "parseRelayEndpoint parses host path and default port" {
-    const ep = try parseRelayEndpoint("wss://relay.nullclaw.io/ws/agent");
-    try std.testing.expectEqualStrings("relay.nullclaw.io", ep.host);
+    const ep = try parseRelayEndpoint("wss://relay.krustyklaw.io/ws/agent");
+    try std.testing.expectEqualStrings("relay.krustyklaw.io", ep.host);
     try std.testing.expectEqual(@as(u16, 443), ep.port);
     try std.testing.expectEqualStrings("/ws/agent", ep.path);
 }
 
 test "parseRelayEndpoint parses explicit port" {
-    const ep = try parseRelayEndpoint("wss://relay.nullclaw.io:9443/ws");
-    try std.testing.expectEqualStrings("relay.nullclaw.io", ep.host);
+    const ep = try parseRelayEndpoint("wss://relay.krustyklaw.io:9443/ws");
+    try std.testing.expectEqualStrings("relay.krustyklaw.io", ep.host);
     try std.testing.expectEqual(@as(u16, 9443), ep.port);
     try std.testing.expectEqualStrings("/ws", ep.path);
 }
 
 test "parseRelayEndpoint rejects non-wss URL" {
-    try std.testing.expectError(error.InvalidRelayUrl, parseRelayEndpoint("https://relay.nullclaw.io/ws"));
-    try std.testing.expectError(error.InvalidRelayUrl, parseRelayEndpoint("ws://relay.nullclaw.io/ws"));
+    try std.testing.expectError(error.InvalidRelayUrl, parseRelayEndpoint("https://relay.krustyklaw.io/ws"));
+    try std.testing.expectError(error.InvalidRelayUrl, parseRelayEndpoint("ws://relay.krustyklaw.io/ws"));
 }
 
 test "WebChannel setActiveToken rejects non url-safe tokens" {

@@ -6,7 +6,7 @@ This guide covers the main installation paths for macOS, Linux, and Windows.
 
 **Who this page is for**
 
-- First-time users installing NullClaw on a local machine
+- First-time users installing KrustyKlaw on a local machine
 - Operators choosing between package install, container deployment, and source build
 - Contributors validating the baseline runtime before deeper setup
 
@@ -19,7 +19,7 @@ This guide covers the main installation paths for macOS, Linux, and Windows.
 **If you came from ...**
 
 - [README](./README.md): this page is the concrete first-run path after choosing the installation track
-- [Commands](./commands.md): come here first if the CLI is missing or `nullclaw --help` does not work yet
+- [Commands](./commands.md): come here first if the CLI is missing or `krustyklaw --help` does not work yet
 - [Development](./development.md): return here if a contributor workflow also needs a clean local binary setup
 
 ## Prerequisites
@@ -38,20 +38,20 @@ The output must be `0.15.2`.
 ## Option 1: Homebrew (recommended for macOS/Linux)
 
 ```bash
-brew install nullclaw
-nullclaw --help
+brew install krustyklaw
+krustyklaw --help
 ```
 
 If the command works, installation is complete.
 
 ## Option 2: Official Container Image (Docker / Podman)
 
-NullClaw publishes an official OCI image at `ghcr.io/nullclaw/nullclaw`.
+KrustyKlaw publishes an official OCI image at `ghcr.io/krustyklaw/krustyklaw`.
 
-The container stores its persistent state under `/nullclaw-data`:
+The container stores its persistent state under `/krustyklaw-data`:
 
-- config: `/nullclaw-data/config.json`
-- workspace: `/nullclaw-data/workspace`
+- config: `/krustyklaw-data/config.json`
+- workspace: `/krustyklaw-data/workspace`
 
 The bundled starter config already uses the current schema (`agents.defaults.model.primary` plus `models.providers`), so `latest` should boot cleanly before you customize provider credentials.
 
@@ -59,24 +59,24 @@ The bundled starter config already uses the current schema (`agents.defaults.mod
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest status
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest status
 ```
 
 Initialize config interactively:
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest onboard --interactive
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest onboard --interactive
 ```
 
 Run the interactive agent:
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest agent
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest agent
 ```
 
 Run the HTTP gateway:
@@ -84,8 +84,8 @@ Run the HTTP gateway:
 ```bash
 docker run --rm -it \
   -p 127.0.0.1:3000:3000 \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest
 ```
 
 ### Docker Compose
@@ -117,24 +117,24 @@ Profile behavior:
 
 If you need LAN or public exposure, change the published host IP deliberately and review [Security](./security.md) first.
 
-To pin a release tag or switch registries later, override `NULLCLAW_IMAGE`:
+To pin a release tag or switch registries later, override `KRUSTYKLAW_IMAGE`:
 
 ```bash
-NULLCLAW_IMAGE=ghcr.io/nullclaw/nullclaw:v2026.3.11 docker compose --profile gateway up -d gateway
+KRUSTYKLAW_IMAGE=ghcr.io/krustyklaw/krustyklaw:v2026.3.11 docker compose --profile gateway up -d gateway
 ```
 
 ## Option 3: Build from Source (cross-platform)
 
 ```bash
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig build -Doptimize=ReleaseSmall
 zig build test --summary all
 ```
 
 Build output:
 
-- `zig-out/bin/nullclaw`
+- `zig-out/bin/krustyklaw`
 
 ## Option 4: Android / Termux
 
@@ -149,11 +149,11 @@ There are three different Android / Termux paths:
 ```bash
 pkg update
 pkg install git zig
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig version
 zig build -Doptimize=ReleaseSmall
-./zig-out/bin/nullclaw --help
+./zig-out/bin/krustyklaw --help
 ```
 
 Notes:
@@ -209,21 +209,21 @@ if (-not ($user_path -split ";" | Where-Object { $_ -eq $bin })) {
 $env:Path = "$env:Path;$bin"
 ```
 
-### Downloaded nullclaw binary file (Windows,Powershell)
-You can rename the downloaded nullclaw binary file(.exe) to nullclaw.exe，then run the following commands with administrator privileges in Powershell, that will add the directory which the binary file is located in to Environment Variable PATH in Windows:
+### Downloaded krustyklaw binary file (Windows,Powershell)
+You can rename the downloaded krustyklaw binary file(.exe) to krustyklaw.exe，then run the following commands with administrator privileges in Powershell, that will add the directory which the binary file is located in to Environment Variable PATH in Windows:
 
 ```Powershell 
 $old = [Environment]::GetEnvironmentVariable("Path", "Machine")
-$new = "$old;x:\nullclaww二进制文件所在目录"
+$new = "$old;x:\krustyklaww二进制文件所在目录"
 [Environment]::SetEnvironmentVariable("Path", $new, "Machine")
 ```
 
 ## Verify Installation
 
 ```bash
-nullclaw --help
-nullclaw --version
-nullclaw status
+krustyklaw --help
+krustyklaw --version
+krustyklaw status
 ```
 
 If `status` returns component state successfully, runtime basics are ready.
@@ -235,26 +235,26 @@ If `status` returns component state successfully, runtime basics are ready.
 - update:
 ```bash
 brew update
-brew upgrade nullclaw
+brew upgrade krustyklaw
 ```
 - uninstall:
 ```bash
-brew uninstall nullclaw
+brew uninstall krustyklaw
 ```
 #### Command line(CMD) (Windows)
 
-- update: `nullclaw update`
+- update: `krustyklaw update`
 
-- uninstall: delete the `nullclaw` binary file and remove the entry of the directory containing the binary file in environment variables PATH if it exists.
+- uninstall: delete the `krustyklaw` binary file and remove the entry of the directory containing the binary file in environment variables PATH if it exists.
 
 ### Source install
 
 - Upgrade: `git pull`, then rebuild with `zig build -Doptimize=ReleaseSmall`.
-- Uninstall: delete the installed `nullclaw` binary and remove the PATH entry.
+- Uninstall: delete the installed `krustyklaw` binary and remove the PATH entry.
 
 ## Next Steps
 
-- Run `nullclaw onboard --interactive`, then continue with [Configuration](./configuration.md)
+- Run `krustyklaw onboard --interactive`, then continue with [Configuration](./configuration.md)
 - Use [Usage and Operations](./usage.md) for first-run commands, service mode, and troubleshooting
 - Keep [Commands](./commands.md) nearby if you want a task-based CLI reference after install
 

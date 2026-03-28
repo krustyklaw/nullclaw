@@ -5038,7 +5038,7 @@ test "slash /status returns agent info" {
     const response = (try agent.handleSlashCommand("/status")).?;
     defer allocator.free(response);
 
-    try std.testing.expect(std.mem.indexOf(u8, response, "🌊 NullClaw ") != null);
+    try std.testing.expect(std.mem.indexOf(u8, response, "🌊 KrustyKlaw ") != null);
     try std.testing.expect(std.mem.indexOf(u8, response, "test-model") != null);
     try std.testing.expect(std.mem.indexOf(u8, response, "42") != null);
 }
@@ -5053,7 +5053,7 @@ test "slash /status can render without emojis" {
     defer allocator.free(response);
 
     try std.testing.expect(std.mem.indexOf(u8, response, "🌊") == null);
-    try std.testing.expect(std.mem.indexOf(u8, response, "NullClaw") != null);
+    try std.testing.expect(std.mem.indexOf(u8, response, "KrustyKlaw") != null);
     try std.testing.expect(std.mem.indexOf(u8, response, "Model:") != null);
     try std.testing.expect(std.mem.indexOf(u8, response, "🧠") == null);
 }
@@ -5110,7 +5110,7 @@ test "slash /model with telegram bot mention switches model" {
     defer agent.deinit();
     agent.max_tokens = 111;
 
-    const response = (try agent.handleSlashCommand("/model@nullclaw_bot qianfan/custom-model")).?;
+    const response = (try agent.handleSlashCommand("/model@krustyklaw_bot qianfan/custom-model")).?;
     defer allocator.free(response);
 
     try std.testing.expect(std.mem.indexOf(u8, response, "qianfan/custom-model") != null);

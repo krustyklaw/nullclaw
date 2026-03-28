@@ -2,7 +2,7 @@
 ///
 /// Accepts a JSON string with wizard answers, applies them to the config,
 /// saves, scaffolds the workspace, and prints {"status":"ok"} on success.
-/// Used by nullhub to configure nullclaw without interactive terminal input.
+/// Used by nullhub to configure krustyklaw without interactive terminal input.
 const std = @import("std");
 const onboard = @import("onboard.zig");
 const channel_catalog = @import("channel_catalog.zig");
@@ -18,7 +18,7 @@ const WizardAnswers = struct {
     autonomy: ?[]const u8 = null,
     gateway_port: ?u16 = null,
     /// Override config/workspace directory (used by nullhub for instance isolation).
-    /// Falls back to NULLCLAW_HOME env, then ~/.nullclaw/.
+    /// Falls back to KRUSTYKLAW_HOME env, then ~/.krustyklaw/.
     home: ?[]const u8 = null,
 };
 
@@ -432,10 +432,10 @@ pub fn run(allocator: std.mem.Allocator, args: []const []const u8) !void {
     ) catch null;
     defer if (raw_parsed) |rp| rp.deinit();
 
-    const env_home = std.process.getEnvVarOwned(allocator, "NULLCLAW_HOME") catch null;
+    const env_home = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_HOME") catch null;
     defer if (env_home) |v| allocator.free(v);
 
-    // Resolve home directory: JSON home > NULLCLAW_HOME env > default (~/.nullclaw/)
+    // Resolve home directory: JSON home > KRUSTYKLAW_HOME env > default (~/.krustyklaw/)
     const custom_home: ?[]const u8 = answers.home orelse env_home;
 
     // Load config. For custom home, read/write only that home path.
@@ -599,7 +599,7 @@ pub fn run(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
 test "from_json requires JSON argument" {
     // Cannot easily test process.exit in-process; just verify the function signature compiles.
-    // The real integration test is: nullclaw --from-json '{"provider":"openrouter"}'
+    // The real integration test is: krustyklaw --from-json '{"provider":"openrouter"}'
 }
 
 test "isKnownTunnelProvider validates wizard options" {

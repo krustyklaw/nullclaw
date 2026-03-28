@@ -1,6 +1,6 @@
 # CONFIG.md - Generated Config Guide
 
-This file is a quick guide to the main settings that `nullclaw onboard` configures in `config.json`.
+This file is a quick guide to the main settings that `krustyklaw onboard` configures in `config.json`.
 It is intentionally scoped to the most common onboarding fields, not the full config schema.
 
 ## Core Fields

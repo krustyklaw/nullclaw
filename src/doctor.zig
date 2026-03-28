@@ -1,4 +1,4 @@
-//! Doctor -- system diagnostics for nullclaw.
+//! Doctor -- system diagnostics for krustyklaw.
 //!
 //! Mirrors ZeroClaw's doctor module with severity-based diagnostics:
 //!   - DiagItem system with ok/warn/err severity levels
@@ -6,7 +6,7 @@
 //!   - Workspace integrity (writable probe, disk space, key files)
 //!   - Daemon state with proper JSON parsing
 //!   - Environment checks (git, curl, shell, home)
-//!   - Sandbox, cron status, channel connectivity (nullclaw-specific)
+//!   - Sandbox, cron status, channel connectivity (krustyklaw-specific)
 
 const std = @import("std");
 const platform = @import("platform.zig");
@@ -127,13 +127,13 @@ pub fn runDoctor(
     try checkDaemonState(allocator, config, &items);
     try checkEnvironment(allocator, &items);
 
-    // nullclaw-specific extras
+    // krustyklaw-specific extras
     checkSandbox(allocator, config, &items);
     try checkCronStatus(allocator, &items);
     checkChannels(allocator, config, &items);
 
     // Print grouped report
-    try writer.writeAll("nullclaw Doctor (enhanced)\n\n");
+    try writer.writeAll("krustyklaw Doctor (enhanced)\n\n");
 
     var current_cat: []const u8 = "";
     var ok_count: u32 = 0;
@@ -156,7 +156,7 @@ pub fn runDoctor(
 
     try writer.print("\nSummary: {d} ok, {d} warnings, {d} errors\n", .{ ok_count, warn_count, err_count });
     if (err_count > 0) {
-        try writer.writeAll("Run 'nullclaw doctor --fix' or check your config.\n");
+        try writer.writeAll("Run 'krustyklaw doctor --fix' or check your config.\n");
     }
 }
 
@@ -173,7 +173,7 @@ pub fn run(allocator: std.mem.Allocator) !void {
             Color.red ++ "[ERR]" ++ Color.reset
         else
             "[ERR]";
-        try stdout.print("{s} No config found -- run `nullclaw onboard` first\n", .{prefix});
+        try stdout.print("{s} No config found -- run `krustyklaw onboard` first\n", .{prefix});
         try stdout.flush();
         return;
     };
@@ -269,7 +269,7 @@ pub fn checkConfigSemantics(
     if (has_channel) {
         try items.append(allocator, DiagItem.ok(cat, "at least one channel configured"));
     } else {
-        try items.append(allocator, DiagItem.warn(cat, "no channels configured -- run `nullclaw onboard` to set one up"));
+        try items.append(allocator, DiagItem.warn(cat, "no channels configured -- run `krustyklaw onboard` to set one up"));
     }
 }
 
@@ -294,7 +294,7 @@ pub fn checkWorkspace(
     }
 
     // Writable probe
-    const probe_name = ".nullclaw_doctor_probe";
+    const probe_name = ".krustyklaw_doctor_probe";
     const probe_path = try std.fs.path.join(allocator, &.{ ws, probe_name });
     defer allocator.free(probe_path);
 
@@ -881,7 +881,7 @@ test "checkDaemonState handles missing file" {
     var items: std.ArrayList(DiagItem) = .empty;
 
     var cfg = testConfig();
-    cfg.config_path = "/tmp/nonexistent-nullclaw-test/config.json";
+    cfg.config_path = "/tmp/nonexistent-krustyklaw-test/config.json";
 
     try checkDaemonState(allocator, &cfg, &items);
 
@@ -949,8 +949,8 @@ test "DiagResult defaults" {
 
 fn testConfig() Config {
     return Config{
-        .workspace_dir = "/tmp/nullclaw-test-workspace",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test-workspace",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .allocator = std.testing.allocator,
     };
 }

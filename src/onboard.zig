@@ -1,4 +1,4 @@
-//! Onboarding — interactive setup wizard and quick setup for nullclaw.
+//! Onboarding — interactive setup wizard and quick setup for krustyklaw.
 //!
 //! Mirrors ZeroClaw's onboard module:
 //!   - Interactive wizard (9-step configuration flow)
@@ -41,7 +41,7 @@ const BANNER =
     \\
 ;
 
-const WORKSPACE_STATE_DIR = ".nullclaw";
+const WORKSPACE_STATE_DIR = ".krustyklaw";
 const WORKSPACE_STATE_FILE = "workspace-state.json";
 const WORKSPACE_STATE_VERSION: i64 = 1;
 
@@ -70,7 +70,7 @@ const WORKSPACE_BOOTSTRAP_TEMPLATE = @embedFile("workspace_templates/BOOTSTRAP.m
 pub const ProjectContext = struct {
     user_name: []const u8 = "User",
     timezone: []const u8 = "UTC",
-    agent_name: []const u8 = "nullclaw",
+    agent_name: []const u8 = "krustyklaw",
     communication_style: []const u8 = "Be warm, natural, and clear. Avoid robotic phrasing.",
 };
 
@@ -218,42 +218,42 @@ fn printProviderNextSteps(
 
     if (requires_api_key and !has_configured_key) {
         try out.print("    1. Set your API key:  export {s}=\"sk-...\"\n", .{env_hint});
-        try out.writeAll("    2. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    2. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    3. Gateway:           nullclaw gateway\n");
+        try out.writeAll("    3. Gateway:           krustyklaw gateway\n");
         return;
     }
 
     if (std.mem.eql(u8, canonical, "openai-codex")) {
-        try out.writeAll("    1. Authenticate:  nullclaw auth login openai-codex\n");
-        try out.writeAll("       Alternative:   nullclaw auth login openai-codex --import-codex\n");
-        try out.writeAll("    2. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    1. Authenticate:  krustyklaw auth login openai-codex\n");
+        try out.writeAll("       Alternative:   krustyklaw auth login openai-codex --import-codex\n");
+        try out.writeAll("    2. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    3. Gateway:       nullclaw gateway\n");
+        try out.writeAll("    3. Gateway:       krustyklaw gateway\n");
         return;
     }
 
     if (std.mem.eql(u8, canonical, "codex-cli")) {
         try out.writeAll("    1. Authenticate:  codex login\n");
-        try out.writeAll("    2. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    2. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    3. Gateway:       nullclaw gateway\n");
+        try out.writeAll("    3. Gateway:       krustyklaw gateway\n");
         return;
     }
 
     if (std.mem.eql(u8, canonical, "gemini-cli")) {
         try out.writeAll("    1. Authenticate:  gemini\n");
         try out.writeAll("       Then choose:   Login with Google\n");
-        try out.writeAll("    2. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    2. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    3. Gateway:       nullclaw gateway\n");
+        try out.writeAll("    3. Gateway:       krustyklaw gateway\n");
         return;
     }
 
-    try out.writeAll("    1. Interactive chat:  nullclaw agent\n");
+    try out.writeAll("    1. Interactive chat:  krustyklaw agent\n");
     try out.writeAll("       Then type:         Hello!\n");
-    try out.writeAll("    2. Gateway:           nullclaw gateway\n");
-    try out.writeAll("    3. Status:            nullclaw status\n");
+    try out.writeAll("    2. Gateway:           krustyklaw gateway\n");
+    try out.writeAll("    3. Status:            krustyklaw status\n");
 }
 
 /// Resolve a provider name used in quick setup.
@@ -300,14 +300,14 @@ fn writeOnboardingNextSteps(out: anytype, api_key_env_hint: ?[]const u8) !void {
     try out.writeAll("\n  Next steps:\n");
     if (api_key_env_hint) |env_hint| {
         try out.print("    1. Set your API key:  export {s}=\"sk-...\"\n", .{env_hint});
-        try out.writeAll("    2. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    2. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    3. Gateway:           nullclaw gateway\n");
+        try out.writeAll("    3. Gateway:           krustyklaw gateway\n");
     } else {
-        try out.writeAll("    1. Interactive chat:  nullclaw agent\n");
+        try out.writeAll("    1. Interactive chat:  krustyklaw agent\n");
         try out.writeAll("       Then type:         Hello!\n");
-        try out.writeAll("    2. Gateway:           nullclaw gateway\n");
-        try out.writeAll("    3. Status:            nullclaw status\n");
+        try out.writeAll("    2. Gateway:           krustyklaw gateway\n");
+        try out.writeAll("    3. Status:            krustyklaw status\n");
     }
     try out.writeAll("\n");
 }
@@ -491,7 +491,7 @@ fn dupeFallbackModels(allocator: std.mem.Allocator, provider: []const u8) ![][]c
 
 /// Fetch available model IDs for a provider (with caching, limit, and fallback).
 ///
-/// Uses file-based cache at `~/.nullclaw/state/models_cache.json` with 12h TTL.
+/// Uses file-based cache at `~/.krustyklaw/state/models_cache.json` with 12h TTL.
 /// Returns at most 20 model IDs. Caller ALWAYS owns the returned slice and strings.
 /// Free with: for (models) |m| allocator.free(m); allocator.free(models);
 pub fn fetchModels(allocator: std.mem.Allocator, provider: []const u8, api_key: ?[]const u8) ![][]const u8 {
@@ -504,7 +504,7 @@ pub fn fetchModels(allocator: std.mem.Allocator, provider: []const u8, api_key: 
         return dupeFallbackModels(allocator, provider);
     defer allocator.free(home);
 
-    const state_dir = try std.fs.path.join(allocator, &.{ home, ".nullclaw", "state" });
+    const state_dir = try std.fs.path.join(allocator, &.{ home, ".krustyklaw", "state" });
     defer allocator.free(state_dir);
 
     // Ensure state directory exists
@@ -1019,7 +1019,7 @@ pub fn runChannelsOnly(allocator: std.mem.Allocator) !void {
     resetStdinLineReader();
 
     var cfg = Config.load(allocator) catch {
-        try stdout.writeAll("No existing config found. Run `nullclaw onboard` first.\n");
+        try stdout.writeAll("No existing config found. Run `krustyklaw onboard` first.\n");
         try stdout.flush();
         return error.ConfigNotFound;
     };
@@ -1923,7 +1923,7 @@ pub fn runWizard(allocator: std.mem.Allocator) !void {
     const out = &bw.interface;
     resetStdinLineReader();
     try out.writeAll(BANNER);
-    try out.writeAll("  Welcome to nullclaw -- the fastest, smallest AI assistant.\n");
+    try out.writeAll("  Welcome to krustyklaw -- the fastest, smallest AI assistant.\n");
     try out.writeAll("  This wizard will configure your agent.\n\n");
     try out.flush();
 
@@ -2047,7 +2047,7 @@ pub fn runWizard(allocator: std.mem.Allocator) !void {
     } else {
         try out.writeAll("  Step 2/8: Authentication\n");
         if (std.mem.eql(u8, cfg.default_provider, "openai-codex")) {
-            try out.writeAll("  -> Uses local OAuth tokens from ~/.nullclaw/auth.json or ~/.codex/auth.json\n\n");
+            try out.writeAll("  -> Uses local OAuth tokens from ~/.krustyklaw/auth.json or ~/.codex/auth.json\n\n");
         } else if (std.mem.eql(u8, cfg.default_provider, "codex-cli")) {
             try out.writeAll("  -> Uses your local Codex CLI login (`codex login`)\n\n");
         } else if (std.mem.eql(u8, cfg.default_provider, "gemini-cli")) {
@@ -2303,7 +2303,7 @@ const catalog_providers = [_]ModelsCatalogProvider{
 };
 
 /// Refresh the model catalog by fetching available models from known providers.
-/// Saves results to ~/.nullclaw/models_cache.json.
+/// Saves results to ~/.krustyklaw/models_cache.json.
 pub fn runModelsRefresh(allocator: std.mem.Allocator) !void {
     var stdout_buf: [4096]u8 = undefined;
     var bw = std.fs.File.stdout().writer(&stdout_buf);
@@ -2318,9 +2318,9 @@ pub fn runModelsRefresh(allocator: std.mem.Allocator) !void {
         return;
     };
     defer allocator.free(home);
-    const cache_path = try std.fs.path.join(allocator, &.{ home, ".nullclaw", "models_cache.json" });
+    const cache_path = try std.fs.path.join(allocator, &.{ home, ".krustyklaw", "models_cache.json" });
     defer allocator.free(cache_path);
-    const cache_dir = try std.fs.path.join(allocator, &.{ home, ".nullclaw" });
+    const cache_dir = try std.fs.path.join(allocator, &.{ home, ".krustyklaw" });
     defer allocator.free(cache_dir);
 
     // Ensure directory exists
@@ -3010,13 +3010,13 @@ pub fn defaultBackendKey() []const u8 {
 fn getDefaultWorkspace(allocator: std.mem.Allocator) ![]const u8 {
     const home = try platform.getHomeDir(allocator);
     defer allocator.free(home);
-    return std.fs.path.join(allocator, &.{ home, ".nullclaw", "workspace" });
+    return std.fs.path.join(allocator, &.{ home, ".krustyklaw", "workspace" });
 }
 
 fn getDefaultConfigPath(allocator: std.mem.Allocator) ![]const u8 {
     const home = try platform.getHomeDir(allocator);
     defer allocator.free(home);
-    return std.fs.path.join(allocator, &.{ home, ".nullclaw", "config.json" });
+    return std.fs.path.join(allocator, &.{ home, ".krustyklaw", "config.json" });
 }
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -3807,10 +3807,10 @@ test "printProviderNextSteps prefers interactive chat when api key is already se
     try printProviderNextSteps(&aw.writer, "openai", "OPENAI_API_KEY", true, true);
 
     const rendered = aw.writer.buffer[0..aw.writer.end];
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw agent -m") == null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  nullclaw agent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw agent -m") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  krustyklaw agent") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "Then type:         Hello!") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Status:            nullclaw status") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Status:            krustyklaw status") != null);
 }
 
 test "printProviderNextSteps includes env hint before interactive chat" {
@@ -3821,9 +3821,9 @@ test "printProviderNextSteps includes env hint before interactive chat" {
 
     const rendered = aw.writer.buffer[0..aw.writer.end];
     try std.testing.expect(std.mem.indexOf(u8, rendered, "export OPENAI_API_KEY=\"sk-...\"") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw agent -m") == null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  nullclaw agent") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Gateway:           nullclaw gateway") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw agent -m") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  krustyklaw agent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Gateway:           krustyklaw gateway") != null);
 }
 
 test "printProviderNextSteps keeps openai-codex auth flow and interactive chat" {
@@ -3833,10 +3833,10 @@ test "printProviderNextSteps keeps openai-codex auth flow and interactive chat" 
     try printProviderNextSteps(&aw.writer, "openai-codex", "", false, false);
 
     const rendered = aw.writer.buffer[0..aw.writer.end];
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw auth login openai-codex") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw auth login openai-codex") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "--import-codex") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw agent -m") == null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  nullclaw agent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw agent -m") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  krustyklaw agent") != null);
 }
 
 test "printProviderNextSteps keeps codex-cli auth flow and interactive chat" {
@@ -3847,8 +3847,8 @@ test "printProviderNextSteps keeps codex-cli auth flow and interactive chat" {
 
     const rendered = aw.writer.buffer[0..aw.writer.end];
     try std.testing.expect(std.mem.indexOf(u8, rendered, "codex login") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw agent -m") == null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  nullclaw agent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw agent -m") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  krustyklaw agent") != null);
 }
 
 test "printProviderNextSteps keeps gemini-cli auth flow and interactive chat" {
@@ -3860,8 +3860,8 @@ test "printProviderNextSteps keeps gemini-cli auth flow and interactive chat" {
     const rendered = aw.writer.buffer[0..aw.writer.end];
     try std.testing.expect(std.mem.indexOf(u8, rendered, "Authenticate:  gemini") != null);
     try std.testing.expect(std.mem.indexOf(u8, rendered, "Login with Google") != null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "nullclaw agent -m") == null);
-    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  nullclaw agent") != null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "krustyklaw agent -m") == null);
+    try std.testing.expect(std.mem.indexOf(u8, rendered, "Interactive chat:  krustyklaw agent") != null);
 }
 
 test "providerEnvVar gemini aliases" {
@@ -3905,7 +3905,7 @@ test "ProjectContext default values" {
     const ctx = ProjectContext{};
     try std.testing.expectEqualStrings("User", ctx.user_name);
     try std.testing.expectEqualStrings("UTC", ctx.timezone);
-    try std.testing.expectEqualStrings("nullclaw", ctx.agent_name);
+    try std.testing.expectEqualStrings("krustyklaw", ctx.agent_name);
     try std.testing.expect(ctx.communication_style.len > 0);
 }
 
@@ -3941,7 +3941,7 @@ test "scaffoldWorkspace does not create memory subdirectory by default" {
     try std.testing.expectError(error.FileNotFound, tmp.dir.openDir("memory", .{}));
 }
 
-test "BANNER is non-empty and contains nullclaw branding" {
+test "BANNER is non-empty and contains krustyklaw branding" {
     try std.testing.expect(BANNER.len > 100);
     try std.testing.expect(std.mem.indexOf(u8, BANNER, "Zig") != null or std.mem.indexOf(u8, BANNER, "smallest") != null);
 }

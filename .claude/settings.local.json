@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(zig build:*)",
+      "Bash(zig-out/bin/nullclaw.exe --version)",
+      "Bash(zig-out/bin/nullclaw.exe help:*)",
+      "Bash(zig-out/bin/nullclaw.exe desktop:*)",
+      "Bash(taskkill /F /IM nullclaw.exe)",
+      "Bash(powershell -Command \"Stop-Process -Name nullclaw -Force -ErrorAction SilentlyContinue; Start-Sleep 1\")",
+      "Bash(curl:*)",
+      "Bash(zig-out/bin/krustyklaw.exe version:*)",
+      "Bash(zig-out/bin/krustyklaw.exe help:*)"
+    ]
+  }
+}

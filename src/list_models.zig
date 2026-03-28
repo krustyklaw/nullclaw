@@ -59,7 +59,7 @@ pub fn run(allocator: std.mem.Allocator, args: []const []const u8) !void {
 
 test "run requires --provider flag" {
     // Cannot easily test process.exit in-process; just verify the function signature compiles.
-    // The real integration test is: nullclaw --list-models --provider anthropic
+    // The real integration test is: krustyklaw --list-models --provider anthropic
 }
 
 test "writeModelsJson escapes model identifiers" {

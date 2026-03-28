@@ -15,8 +15,8 @@
 
 ## `error.LarkApiError` 快速排查
 
-1. 先运行 `nullclaw doctor`，确认渠道配置在结构上是有效的。
-2. 启动后运行 `nullclaw channel status`，确认是否处于 running 但未 connected 的状态。
+1. 先运行 `krustyklaw doctor`，确认渠道配置在结构上是有效的。
+2. 启动后运行 `krustyklaw channel status`，确认是否处于 running 但未 connected 的状态。
 3. 如果持续出现 `warning(lark): lark websocket cycle failed: error.LarkApiError`，优先按下面三类排查：
    - Lark/飞书应用权限或 scope 缺失
    - 区域端点选择错误（`use_feishu`）

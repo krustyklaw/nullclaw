@@ -98,7 +98,7 @@ pub const WebFetchTool = struct {
 
         // Fetch URL via curl subprocess
         const headers = [_][]const u8{
-            "User-Agent: nullclaw/0.1 (web_fetch tool)",
+            "User-Agent: krustyklaw/0.1 (web_fetch tool)",
             "Accept: text/html,application/json,text/plain,*/*",
         };
 

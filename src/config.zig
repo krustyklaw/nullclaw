@@ -371,11 +371,11 @@ pub const Config = struct {
         }
         const allocator = arena_ptr.allocator();
 
-        // NULLCLAW_HOME overrides the default config directory (~/.nullclaw/).
-        const config_dir = std.process.getEnvVarOwned(allocator, "NULLCLAW_HOME") catch |err| switch (err) {
+        // KRUSTYKLAW_HOME overrides the default config directory (~/.krustyklaw/).
+        const config_dir = std.process.getEnvVarOwned(allocator, "KRUSTYKLAW_HOME") catch |err| switch (err) {
             error.EnvironmentVariableNotFound => blk: {
                 const home = platform.getHomeDir(allocator) catch return error.NoHomeDir;
-                break :blk try std.fs.path.join(allocator, &.{ home, ".nullclaw" });
+                break :blk try std.fs.path.join(allocator, &.{ home, ".krustyklaw" });
             },
             else => return err,
         };
@@ -783,20 +783,20 @@ pub const Config = struct {
         try w.print("  }},\n", .{});
     }
 
-    /// Apply NULLCLAW_* environment variable overrides.
+    /// Apply KRUSTYKLAW_* environment variable overrides.
     pub fn applyEnvOverrides(self: *Config) void {
         // Provider
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_PROVIDER")) |prov| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_PROVIDER")) |prov| {
             self.default_provider = prov;
         } else |_| {}
 
         // Model
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_MODEL")) |model| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_MODEL")) |model| {
             self.default_model = model;
         } else |_| {}
 
         // Temperature
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_TEMPERATURE")) |temp_str| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_TEMPERATURE")) |temp_str| {
             defer self.allocator.free(temp_str);
             if (std.fmt.parseFloat(f64, temp_str)) |temp| {
                 if (temp >= 0.0 and temp <= 2.0) {
@@ -806,7 +806,7 @@ pub const Config = struct {
         } else |_| {}
 
         // Gateway port
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_GATEWAY_PORT")) |port_str| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_GATEWAY_PORT")) |port_str| {
             defer self.allocator.free(port_str);
             if (std.fmt.parseInt(u16, port_str, 10)) |port| {
                 self.gateway.port = port;
@@ -814,17 +814,17 @@ pub const Config = struct {
         } else |_| {}
 
         // Gateway host
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_GATEWAY_HOST")) |host| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_GATEWAY_HOST")) |host| {
             self.gateway.host = host;
         } else |_| {}
 
         // Workspace
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_WORKSPACE")) |ws| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_WORKSPACE")) |ws| {
             self.workspace_dir = ws;
         } else |_| {}
 
         // Allow public bind
-        if (std.process.getEnvVarOwned(self.allocator, "NULLCLAW_ALLOW_PUBLIC_BIND")) |val| {
+        if (std.process.getEnvVarOwned(self.allocator, "KRUSTYKLAW_ALLOW_PUBLIC_BIND")) |val| {
             defer self.allocator.free(val);
             self.gateway.allow_public_bind = std.mem.eql(u8, val, "1") or std.mem.eql(u8, val, "true");
         } else |_| {}
@@ -1433,7 +1433,7 @@ pub const Config = struct {
                 .{},
             ),
             ValidationError.NoDefaultModel => std.debug.print(
-                "No default model configured. Set agents.defaults.model.primary in ~/.nullclaw/config.json or run `nullclaw onboard`.\n",
+                "No default model configured. Set agents.defaults.model.primary in ~/.krustyklaw/config.json or run `krustyklaw onboard`.\n",
                 .{},
             ),
             ValidationError.TemperatureOutOfRange => std.debug.print("Config error: temperature must be between 0.0 and 2.0.\n", .{}),
@@ -1928,7 +1928,7 @@ test "save roundtrip preserves external channel config" {
             .account_id = "main",
             .runtime_name = "whatsapp_web",
             .transport = .{
-                .command = "nullclaw-plugin-whatsapp-web",
+                .command = "krustyklaw-plugin-whatsapp-web",
                 .args = &.{"--stdio"},
                 .env = &external_env,
                 .timeout_ms = 2500,
@@ -1953,7 +1953,7 @@ test "save roundtrip preserves external channel config" {
     try std.testing.expect(std.mem.indexOf(u8, content, "\"external\": {") != null);
     try std.testing.expect(std.mem.indexOf(u8, content, "\"runtime_name\": \"whatsapp_web\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, content, "\"transport\": {") != null);
-    try std.testing.expect(std.mem.indexOf(u8, content, "\"command\": \"nullclaw-plugin-whatsapp-web\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, content, "\"command\": \"krustyklaw-plugin-whatsapp-web\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, content, "\"config\": {") != null);
 
     var arena = std.heap.ArenaAllocator.init(allocator);
@@ -1969,7 +1969,7 @@ test "save roundtrip preserves external channel config" {
     const external_cfg = loaded.channels.external[0];
     try std.testing.expectEqualStrings("main", external_cfg.account_id);
     try std.testing.expectEqualStrings("whatsapp_web", external_cfg.runtime_name);
-    try std.testing.expectEqualStrings("nullclaw-plugin-whatsapp-web", external_cfg.transport.command);
+    try std.testing.expectEqualStrings("krustyklaw-plugin-whatsapp-web", external_cfg.transport.command);
     try std.testing.expectEqual(@as(u32, 2500), external_cfg.transport.timeout_ms);
     try std.testing.expectEqual(@as(usize, 1), external_cfg.transport.env.len);
     try std.testing.expectEqualStrings("TOKEN", external_cfg.transport.env[0].key);
@@ -2037,7 +2037,7 @@ test "save roundtrip preserves diagnostics otel headers" {
 
     const headers = [_]DiagnosticsConfig.OtelHeaderEntry{
         .{ .key = "Authorization", .value = "Bearer secret-token" },
-        .{ .key = "x-nullwatch-source", .value = "nullclaw" },
+        .{ .key = "x-nullwatch-source", .value = "krustyklaw" },
     };
 
     var cfg = Config{
@@ -2047,7 +2047,7 @@ test "save roundtrip preserves diagnostics otel headers" {
     };
     cfg.diagnostics.backend = "otel";
     cfg.diagnostics.otel_endpoint = "http://127.0.0.1:7710";
-    cfg.diagnostics.otel_service_name = "nullclaw";
+    cfg.diagnostics.otel_service_name = "krustyklaw";
     cfg.diagnostics.otel_headers = &headers;
     try cfg.save();
 
@@ -2066,12 +2066,12 @@ test "save roundtrip preserves diagnostics otel headers" {
     try loaded.parseJson(content);
     try std.testing.expectEqualStrings("otel", loaded.diagnostics.backend);
     try std.testing.expectEqualStrings("http://127.0.0.1:7710", loaded.diagnostics.otel_endpoint.?);
-    try std.testing.expectEqualStrings("nullclaw", loaded.diagnostics.otel_service_name.?);
+    try std.testing.expectEqualStrings("krustyklaw", loaded.diagnostics.otel_service_name.?);
     try std.testing.expectEqual(@as(usize, 2), loaded.diagnostics.otel_headers.len);
     try std.testing.expectEqualStrings("Authorization", loaded.diagnostics.otel_headers[0].key);
     try std.testing.expectEqualStrings("Bearer secret-token", loaded.diagnostics.otel_headers[0].value);
     try std.testing.expectEqualStrings("x-nullwatch-source", loaded.diagnostics.otel_headers[1].key);
-    try std.testing.expectEqualStrings("nullclaw", loaded.diagnostics.otel_headers[1].value);
+    try std.testing.expectEqualStrings("krustyklaw", loaded.diagnostics.otel_headers[1].value);
 }
 
 test "save roundtrip preserves reliability settings" {
@@ -2761,7 +2761,7 @@ test "validation rejects malformed web auth token" {
 }
 
 test "validation rejects malformed web origin entry" {
-    const origins = [_][]const u8{"relay.nullclaw.io"};
+    const origins = [_][]const u8{"relay.krustyklaw.io"};
     const web_accounts = [_]WebConfig{
         .{
             .account_id = "default",
@@ -2784,7 +2784,7 @@ test "validation rejects malformed web origin entry" {
 
 test "validation accepts well formed web channel config" {
     const origins = [_][]const u8{
-        "https://relay.nullclaw.io",
+        "https://relay.krustyklaw.io",
         "chrome-extension://abcdefghijklmnop",
     };
     const web_accounts = [_]WebConfig{
@@ -2931,7 +2931,7 @@ test "validation rejects external channel with invalid timeout_ms" {
             .account_id = "main",
             .runtime_name = "whatsapp_web",
             .transport = .{
-                .command = "nullclaw-plugin-whatsapp-web",
+                .command = "krustyklaw-plugin-whatsapp-web",
                 .timeout_ms = 0,
             },
         },
@@ -3068,7 +3068,7 @@ test "validation rejects token message_auth_mode for relay transport" {
             .account_id = "default",
             .transport = "relay",
             .message_auth_mode = "token",
-            .relay_url = "wss://relay.nullclaw.io/ws/agent",
+            .relay_url = "wss://relay.krustyklaw.io/ws/agent",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
         },
@@ -3111,7 +3111,7 @@ test "validation rejects malformed relay url and agent id" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "https://relay.nullclaw.io/ws",
+            .relay_url = "https://relay.krustyklaw.io/ws",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
         },
@@ -3131,7 +3131,7 @@ test "validation rejects malformed relay url and agent id" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "wss://relay.nullclaw.io/ws",
+            .relay_url = "wss://relay.krustyklaw.io/ws",
             .relay_agent_id = "bad agent",
             .relay_token = "relay-token-0123456789",
         },
@@ -3153,7 +3153,7 @@ test "validation accepts well formed web relay config" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "wss://relay.nullclaw.io/ws/agent",
+            .relay_url = "wss://relay.krustyklaw.io/ws/agent",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
         },
@@ -3175,7 +3175,7 @@ test "validation rejects relay ttl values outside supported ranges" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "wss://relay.nullclaw.io/ws/agent",
+            .relay_url = "wss://relay.krustyklaw.io/ws/agent",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
             .relay_pairing_code_ttl_secs = 30,
@@ -3196,7 +3196,7 @@ test "validation rejects relay ttl values outside supported ranges" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "wss://relay.nullclaw.io/ws/agent",
+            .relay_url = "wss://relay.krustyklaw.io/ws/agent",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
             .relay_ui_token_ttl_secs = 120,
@@ -3217,7 +3217,7 @@ test "validation rejects relay ttl values outside supported ranges" {
         .{
             .account_id = "default",
             .transport = "relay",
-            .relay_url = "wss://relay.nullclaw.io/ws/agent",
+            .relay_url = "wss://relay.krustyklaw.io/ws/agent",
             .relay_agent_id = "agent-1",
             .relay_token = "relay-token-0123456789",
             .relay_token_ttl_secs = 120,
@@ -3240,7 +3240,7 @@ test "validation rejects relay ttl values outside supported ranges" {
 test "json parse diagnostics section" {
     const allocator = std.testing.allocator;
     const json =
-        \\{"diagnostics": {"backend": "otel", "log_tool_calls": true, "log_message_receipts": true, "log_message_payloads": true, "log_llm_io": true, "token_usage_ledger_enabled": false, "token_usage_ledger_window_hours": 12, "token_usage_ledger_max_bytes": 262144, "token_usage_ledger_max_lines": 4096, "otel": {"endpoint": "http://localhost:4318", "service_name": "yc", "headers": {"Authorization": "Bearer test", "x-nullwatch-source": "nullclaw"}}}}
+        \\{"diagnostics": {"backend": "otel", "log_tool_calls": true, "log_message_receipts": true, "log_message_payloads": true, "log_llm_io": true, "token_usage_ledger_enabled": false, "token_usage_ledger_window_hours": 12, "token_usage_ledger_max_bytes": 262144, "token_usage_ledger_max_lines": 4096, "otel": {"endpoint": "http://localhost:4318", "service_name": "yc", "headers": {"Authorization": "Bearer test", "x-nullwatch-source": "krustyklaw"}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -3259,7 +3259,7 @@ test "json parse diagnostics section" {
     try std.testing.expectEqualStrings("Authorization", cfg.diagnostics.otel_headers[0].key);
     try std.testing.expectEqualStrings("Bearer test", cfg.diagnostics.otel_headers[0].value);
     try std.testing.expectEqualStrings("x-nullwatch-source", cfg.diagnostics.otel_headers[1].key);
-    try std.testing.expectEqualStrings("nullclaw", cfg.diagnostics.otel_headers[1].value);
+    try std.testing.expectEqualStrings("krustyklaw", cfg.diagnostics.otel_headers[1].value);
     allocator.free(cfg.diagnostics.backend);
     allocator.free(cfg.diagnostics.otel_endpoint.?);
     allocator.free(cfg.diagnostics.otel_service_name.?);
@@ -3273,13 +3273,13 @@ test "json parse diagnostics section" {
 test "json parse diagnostics section accepts flat otel fields for compatibility" {
     const allocator = std.testing.allocator;
     const json =
-        \\{"diagnostics": {"backend": "otel", "otel_endpoint": "http://otel:4318", "otel_service_name": "nullclaw", "otel_headers": {"Authorization": "Bearer test"}}}
+        \\{"diagnostics": {"backend": "otel", "otel_endpoint": "http://otel:4318", "otel_service_name": "krustyklaw", "otel_headers": {"Authorization": "Bearer test"}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
     try std.testing.expectEqualStrings("otel", cfg.diagnostics.backend);
     try std.testing.expectEqualStrings("http://otel:4318", cfg.diagnostics.otel_endpoint.?);
-    try std.testing.expectEqualStrings("nullclaw", cfg.diagnostics.otel_service_name.?);
+    try std.testing.expectEqualStrings("krustyklaw", cfg.diagnostics.otel_service_name.?);
     try std.testing.expectEqual(@as(usize, 1), cfg.diagnostics.otel_headers.len);
     try std.testing.expectEqualStrings("Authorization", cfg.diagnostics.otel_headers[0].key);
     try std.testing.expectEqualStrings("Bearer test", cfg.diagnostics.otel_headers[0].value);
@@ -4276,7 +4276,7 @@ test "applyEnvOverrides does not crash on default config" {
         .config_path = "/tmp/yc/config.json",
         .allocator = allocator,
     };
-    // Should not crash even when no NULLCLAW_* env vars are set
+    // Should not crash even when no KRUSTYKLAW_* env vars are set
     cfg.applyEnvOverrides();
     // Default values should remain intact
     try std.testing.expectEqualStrings("openrouter", cfg.default_provider);
@@ -4549,7 +4549,7 @@ test "save writes provider native_tools when false" {
             .name = "groq",
             .api_key = "gsk_test",
             .native_tools = false,
-            .user_agent = "nullclaw-test/1.0",
+            .user_agent = "krustyklaw-test/1.0",
         },
     };
 
@@ -4561,7 +4561,7 @@ test "save writes provider native_tools when false" {
     defer allocator.free(content);
 
     try std.testing.expect(std.mem.indexOf(u8, content, "\"native_tools\": false") != null);
-    try std.testing.expect(std.mem.indexOf(u8, content, "\"user_agent\": \"nullclaw-test/1.0\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, content, "\"user_agent\": \"krustyklaw-test/1.0\"") != null);
 }
 
 test "save escapes provider string fields" {
@@ -4585,7 +4585,7 @@ test "save escapes provider string fields" {
             .name = "openai",
             .api_key = "sk-\"quoted\"",
             .base_url = "https://api.example.com/v1/\"quoted\"",
-            .user_agent = "nullclaw \"agent\"",
+            .user_agent = "krustyklaw \"agent\"",
         },
     };
 
@@ -4605,7 +4605,7 @@ test "save escapes provider string fields" {
 
     try std.testing.expectEqualStrings("sk-\"quoted\"", openai.get("api_key").?.string);
     try std.testing.expectEqualStrings("https://api.example.com/v1/\"quoted\"", openai.get("base_url").?.string);
-    try std.testing.expectEqualStrings("nullclaw \"agent\"", openai.get("user_agent").?.string);
+    try std.testing.expectEqualStrings("krustyklaw \"agent\"", openai.get("user_agent").?.string);
 }
 
 test "parseJson reads max_streaming_prompt_bytes from provider config" {
@@ -4958,7 +4958,7 @@ test "provider config lookups match canonical aliases" {
             .api_key = "azure-test",
             .base_url = "https://resource.openai.azure.com/openai/v1",
             .native_tools = false,
-            .user_agent = "nullclaw-test/1.0",
+            .user_agent = "krustyklaw-test/1.0",
         },
     };
     const cfg = Config{
@@ -4971,7 +4971,7 @@ test "provider config lookups match canonical aliases" {
     try std.testing.expectEqualStrings("azure-test", cfg.getProviderKey("azure-openai").?);
     try std.testing.expectEqualStrings("https://resource.openai.azure.com/openai/v1", cfg.getProviderBaseUrl("azure_openai").?);
     try std.testing.expect(!cfg.getProviderNativeTools("azure-openai"));
-    try std.testing.expectEqualStrings("nullclaw-test/1.0", cfg.getProviderUserAgent("azure_openai").?);
+    try std.testing.expectEqualStrings("krustyklaw-test/1.0", cfg.getProviderUserAgent("azure_openai").?);
 }
 
 test "provider config parse reads api_mode responses" {
@@ -5433,7 +5433,7 @@ test "parse external channel accounts" {
     const allocator = arena.allocator();
 
     const json =
-        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"nullclaw-plugin-whatsapp-web","args":["--stdio"],"env":{"TOKEN":"secret"},"timeout_ms":2500},"config":{"bridge_url":"http://127.0.0.1:3301","allow_from":["*"]}}}}}}
+        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"krustyklaw-plugin-whatsapp-web","args":["--stdio"],"env":{"TOKEN":"secret"},"timeout_ms":2500},"config":{"bridge_url":"http://127.0.0.1:3301","allow_from":["*"]}}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5442,7 +5442,7 @@ test "parse external channel accounts" {
     const external_cfg = cfg.channels.external[0];
     try std.testing.expectEqualStrings("wa-web", external_cfg.account_id);
     try std.testing.expectEqualStrings("whatsapp_web", external_cfg.runtime_name);
-    try std.testing.expectEqualStrings("nullclaw-plugin-whatsapp-web", external_cfg.transport.command);
+    try std.testing.expectEqualStrings("krustyklaw-plugin-whatsapp-web", external_cfg.transport.command);
     try std.testing.expectEqual(@as(usize, 1), external_cfg.transport.args.len);
     try std.testing.expectEqualStrings("--stdio", external_cfg.transport.args[0]);
     try std.testing.expectEqual(@as(usize, 1), external_cfg.transport.env.len);
@@ -5459,7 +5459,7 @@ test "parse external channel preserves invalid timeout for validation" {
     const allocator = arena.allocator();
 
     const json =
-        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"nullclaw-plugin-whatsapp-web","timeout_ms":0}}}}}}
+        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"krustyklaw-plugin-whatsapp-web","timeout_ms":0}}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5476,7 +5476,7 @@ test "parse external channel rejects timeout with wrong type" {
     const allocator = arena.allocator();
 
     const json =
-        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"nullclaw-plugin-whatsapp-web","timeout_ms":"slow"}}}}}}
+        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"krustyklaw-plugin-whatsapp-web","timeout_ms":"slow"}}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5493,7 +5493,7 @@ test "parse external channel rejects scalar config at validation time" {
     const allocator = arena.allocator();
 
     const json =
-        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"nullclaw-plugin-whatsapp-web"},"config":"oops"}}}}}
+        \\{"channels":{"external":{"accounts":{"wa-web":{"runtime_name":"whatsapp_web","transport":{"command":"krustyklaw-plugin-whatsapp-web"},"config":"oops"}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5661,7 +5661,7 @@ test "parse maixcam multi-account sorted with custom names" {
 test "parse web accounts with auth token path and allowed origins" {
     const allocator = std.testing.allocator;
     const json =
-        \\{"channels": {"web": {"accounts": {"default": {"listen": "0.0.0.0", "port": 32123, "path": "/ws", "auth_token": "relay-token-123456", "allowed_origins": ["https://relay.nullclaw.io", "chrome-extension://abc"]}}}}}
+        \\{"channels": {"web": {"accounts": {"default": {"listen": "0.0.0.0", "port": 32123, "path": "/ws", "auth_token": "relay-token-123456", "allowed_origins": ["https://relay.krustyklaw.io", "chrome-extension://abc"]}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5675,7 +5675,7 @@ test "parse web accounts with auth token path and allowed origins" {
     try std.testing.expectEqualStrings("relay-token-123456", wc.auth_token.?);
     try std.testing.expectEqualStrings("pairing", wc.message_auth_mode);
     try std.testing.expectEqual(@as(usize, 2), wc.allowed_origins.len);
-    try std.testing.expectEqualStrings("https://relay.nullclaw.io", wc.allowed_origins[0]);
+    try std.testing.expectEqualStrings("https://relay.krustyklaw.io", wc.allowed_origins[0]);
     try std.testing.expectEqualStrings("chrome-extension://abc", wc.allowed_origins[1]);
 
     allocator.free(wc.account_id);
@@ -5711,7 +5711,7 @@ test "parse web account with token message auth mode" {
 test "parse web relay account fields" {
     const allocator = std.testing.allocator;
     const json =
-        \\{"channels": {"web": {"accounts": {"default": {"transport": "relay", "relay_url": "wss://relay.nullclaw.io/ws/agent", "relay_agent_id": "edge-1", "relay_token": "relay-token-999999", "relay_token_ttl_secs": 7200, "relay_pairing_code_ttl_secs": 180, "relay_ui_token_ttl_secs": 86400, "relay_e2e_required": true}}}}}
+        \\{"channels": {"web": {"accounts": {"default": {"transport": "relay", "relay_url": "wss://relay.krustyklaw.io/ws/agent", "relay_agent_id": "edge-1", "relay_token": "relay-token-999999", "relay_token_ttl_secs": 7200, "relay_pairing_code_ttl_secs": 180, "relay_ui_token_ttl_secs": 86400, "relay_e2e_required": true}}}}}
     ;
     var cfg = Config{ .workspace_dir = "/tmp/yc", .config_path = "/tmp/yc/config.json", .allocator = allocator };
     try cfg.parseJson(json);
@@ -5720,7 +5720,7 @@ test "parse web relay account fields" {
     const wc = cfg.channels.web[0];
     try std.testing.expectEqualStrings("default", wc.account_id);
     try std.testing.expectEqualStrings("relay", wc.transport);
-    try std.testing.expectEqualStrings("wss://relay.nullclaw.io/ws/agent", wc.relay_url.?);
+    try std.testing.expectEqualStrings("wss://relay.krustyklaw.io/ws/agent", wc.relay_url.?);
     try std.testing.expectEqualStrings("edge-1", wc.relay_agent_id);
     try std.testing.expectEqualStrings("relay-token-999999", wc.relay_token.?);
     try std.testing.expectEqual(@as(u32, 7200), wc.relay_token_ttl_secs);
@@ -6192,7 +6192,7 @@ test "session config: all dm_scope values accepted" {
 test "save includes nostr channel when configured" {
     const allocator = std.testing.allocator;
 
-    const tmp_path = "/tmp/nullclaw_test_nostr_save.json";
+    const tmp_path = "/tmp/krustyklaw_test_nostr_save.json";
 
     var cfg = Config{
         .workspace_dir = "/tmp",
@@ -6238,7 +6238,7 @@ test "save includes nostr channel when configured" {
 
 test "save includes dm_relays in nostr section" {
     const allocator = std.testing.allocator;
-    const tmp_path = "/tmp/nullclaw_test_dm_relays_save.json";
+    const tmp_path = "/tmp/krustyklaw_test_dm_relays_save.json";
 
     var cfg = Config{
         .workspace_dir = "/tmp",
@@ -6267,7 +6267,7 @@ test "save includes dm_relays in nostr section" {
 
 test "dm_relays round-trips through save and load" {
     const allocator = std.testing.allocator;
-    const tmp_path = "/tmp/nullclaw_test_dm_relays_roundtrip.json";
+    const tmp_path = "/tmp/krustyklaw_test_dm_relays_roundtrip.json";
 
     var cfg = Config{
         .workspace_dir = "/tmp",
@@ -6307,7 +6307,7 @@ test "dm_relays round-trips through save and load" {
 
 test "nostr display_name with special chars round-trips correctly" {
     const allocator = std.testing.allocator;
-    const tmp_path = "/tmp/nullclaw_test_nostr_escape.json";
+    const tmp_path = "/tmp/krustyklaw_test_nostr_escape.json";
 
     var cfg = Config{
         .workspace_dir = "/tmp",
@@ -6317,7 +6317,7 @@ test "nostr display_name with special chars round-trips correctly" {
     var ns_cfg = config_types.NostrConfig{
         .private_key = "enc2:abc",
         .owner_pubkey = "a" ** 64,
-        .display_name = "Bot \"NullClaw\" v1",
+        .display_name = "Bot \"KrustyKlaw\" v1",
         .about = "Line1\nLine2",
     };
     cfg.channels.nostr = &ns_cfg;
@@ -6331,7 +6331,7 @@ test "nostr display_name with special chars round-trips correctly" {
     defer allocator.free(raw);
 
     // Verify the escaping is present in the raw JSON
-    try std.testing.expect(std.mem.indexOf(u8, raw, "\\\"NullClaw\\\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, raw, "\\\"KrustyKlaw\\\"") != null);
     try std.testing.expect(std.mem.indexOf(u8, raw, "\\n") != null);
 
     // Round-trip: parse back and verify the original strings are recovered
@@ -6345,7 +6345,7 @@ test "nostr display_name with special chars round-trips correctly" {
     try loaded.parseJson(raw);
 
     const ns = loaded.channels.nostr.?;
-    try std.testing.expectEqualStrings("Bot \"NullClaw\" v1", ns.display_name);
+    try std.testing.expectEqualStrings("Bot \"KrustyKlaw\" v1", ns.display_name);
     try std.testing.expectEqualStrings("Line1\nLine2", ns.about);
 }
 

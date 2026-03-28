@@ -22,7 +22,7 @@ pub fn execute(
 
     const headers = [_][]const u8{
         "Accept: application/json",
-        "User-Agent: nullclaw/0.1 (web_search)",
+        "User-Agent: krustyklaw/0.1 (web_search)",
     };
 
     const body = common.curlGet(allocator, url_str, &headers, timeout_str) catch |err| {

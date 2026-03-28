@@ -17,24 +17,24 @@ pub fn run() !void {
     try out.writeAll(
         \\{
         \\  "schema_version": 1,
-        \\  "name": "nullclaw",
-        \\  "display_name": "NullClaw",
+        \\  "name": "krustyklaw",
+        \\  "display_name": "KrustyKlaw",
         \\  "description": "Autonomous AI agent runtime",
         \\  "icon": "agent",
-        \\  "repo": "nullclaw/nullclaw",
+        \\  "repo": "krustyklaw/krustyklaw",
         \\
     );
 
     // ── Platforms ────────────────────────────────────────────────────
     try out.writeAll(
         \\  "platforms": {
-        \\    "aarch64-macos": { "asset": "nullclaw-macos-aarch64", "binary": "nullclaw" },
-        \\    "x86_64-macos": { "asset": "nullclaw-macos-x86_64", "binary": "nullclaw" },
-        \\    "x86_64-linux": { "asset": "nullclaw-linux-x86_64", "binary": "nullclaw" },
-        \\    "aarch64-linux": { "asset": "nullclaw-linux-aarch64", "binary": "nullclaw" },
-        \\    "riscv64-linux": { "asset": "nullclaw-linux-riscv64", "binary": "nullclaw" },
-        \\    "x86_64-windows": { "asset": "nullclaw-windows-x86_64.exe", "binary": "nullclaw.exe" },
-        \\    "aarch64-windows": { "asset": "nullclaw-windows-aarch64.exe", "binary": "nullclaw.exe" }
+        \\    "aarch64-macos": { "asset": "krustyklaw-macos-aarch64", "binary": "krustyklaw" },
+        \\    "x86_64-macos": { "asset": "krustyklaw-macos-x86_64", "binary": "krustyklaw" },
+        \\    "x86_64-linux": { "asset": "krustyklaw-linux-x86_64", "binary": "krustyklaw" },
+        \\    "aarch64-linux": { "asset": "krustyklaw-linux-aarch64", "binary": "krustyklaw" },
+        \\    "riscv64-linux": { "asset": "krustyklaw-linux-riscv64", "binary": "krustyklaw" },
+        \\    "x86_64-windows": { "asset": "krustyklaw-windows-x86_64.exe", "binary": "krustyklaw.exe" },
+        \\    "aarch64-windows": { "asset": "krustyklaw-windows-aarch64.exe", "binary": "krustyklaw.exe" }
         \\  },
         \\
     );
@@ -44,7 +44,7 @@ pub fn run() !void {
         \\  "build_from_source": {
         \\    "zig_version": "0.15.2",
         \\    "command": "zig build -Doptimize=ReleaseSmall",
-        \\    "output": "zig-out/bin/nullclaw"
+        \\    "output": "zig-out/bin/krustyklaw"
         \\  },
         \\
     );

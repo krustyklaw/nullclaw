@@ -1,11 +1,11 @@
 # Signal Deployment
 
-Run nullclaw as a Signal chatbot using Docker Compose and a local `signal-cli` container.
+Run krustyklaw as a Signal chatbot using Docker Compose and a local `signal-cli` container.
 
 ## Architecture
 
 ```
-Signal app  <-->  signal-cli container (:8080)  <-->  nullclaw gateway (:3000)
+Signal app  <-->  signal-cli container (:8080)  <-->  krustyklaw gateway (:3000)
 ```
 
 ## Setup
@@ -14,7 +14,7 @@ Signal app  <-->  signal-cli container (:8080)  <-->  nullclaw gateway (:3000)
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.signal.yml up -d signal-cli
-docker compose -f docker-compose.yml -f docker-compose.signal.yml exec signal-cli signal-cli link -n nullclaw
+docker compose -f docker-compose.yml -f docker-compose.signal.yml exec signal-cli signal-cli link -n krustyklaw
 ```
 
 Scan the QR code in Signal (Settings -> Linked Devices -> Link New Device), then stop the `signal-cli` container.
@@ -71,10 +71,10 @@ Create `config.signal.json` (example):
 
 Keep `http_url` as `http://signal-cli:8080` for Docker networking.
 
-### 3. Build nullclaw image
+### 3. Build krustyklaw image
 
 ```bash
-DOCKER_BUILDKIT=0 docker build -t nullclaw:latest .
+DOCKER_BUILDKIT=0 docker build -t krustyklaw:latest .
 ```
 
 ## Runtime modes (env-gated)
@@ -124,7 +124,7 @@ curl -i http://localhost:8080/v1/health
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.signal.yml --profile gateway down -v
-docker rmi nullclaw:latest
+docker rmi krustyklaw:latest
 docker rmi bbernhard/signal-cli-rest-api:latest
 rm -rf ~/.local/share/signal-cli
 rm -f .env.signal config.signal.json

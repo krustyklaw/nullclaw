@@ -368,8 +368,8 @@ test "findNamedAgent accepts normalized id alias" {
 
 test "applyBindingUpdate adds account-scoped peer binding" {
     var cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = std.testing.allocator,
         .agents = &.{
             .{ .name = "Coder Agent", .provider = "ollama", .model = "qwen2.5-coder:14b" },
@@ -410,8 +410,8 @@ test "applyBindingUpdate adds exact binding without replacing inherited peer fal
     };
 
     var cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agents = &.{
             .{ .name = "Coder Agent", .provider = "ollama", .model = "qwen2.5-coder:14b" },
@@ -465,8 +465,8 @@ test "applyBindingUpdate clear removes exact binding only" {
     };
 
     var cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agent_bindings = existing,
     };
@@ -502,8 +502,8 @@ test "applyBindingUpdate clear keeps inherited unscoped peer binding" {
     };
 
     var cfg = Config{
-        .workspace_dir = "/tmp/nullclaw",
-        .config_path = "/tmp/nullclaw/config.json",
+        .workspace_dir = "/tmp/krustyklaw",
+        .config_path = "/tmp/krustyklaw/config.json",
         .allocator = allocator,
         .agent_bindings = existing,
     };

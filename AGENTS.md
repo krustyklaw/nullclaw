@@ -1,11 +1,11 @@
-# AGENTS.md — nullclaw Agent Engineering Protocol
+# AGENTS.md — krustyklaw Agent Engineering Protocol
 
 This file defines the default working protocol for coding agents in this repository.
 Scope: entire repository.
 
 ## 1) Project Snapshot (Read First)
 
-nullclaw is a Zig-first autonomous AI assistant runtime optimized for:
+krustyklaw is a Zig-first autonomous AI assistant runtime optimized for:
 
 - minimal binary size (target: < 1 MB ReleaseSmall)
 - minimal memory footprint (target: < 5 MB peak RSS)
@@ -120,7 +120,7 @@ src/
   main.zig              CLI entrypoint and command routing
   root.zig              module exports (lib root)
   agent.zig             orchestration loop
-  config.zig            schema + config loading/merging (~/.nullclaw/config.json)
+  config.zig            schema + config loading/merging (~/.krustyklaw/config.json)
   gateway.zig           webhook/HTTP gateway server
   onboard.zig           interactive setup wizard
   health.zig            component health registry
@@ -243,7 +243,7 @@ If full validation is impractical, document what was run and what was skipped.
 - **Logging-only or pure error-propagation changes** (e.g., `catch |err|` + `log.err(...)`): unit testing may not be practical. In this case add a comment near the change explaining why formal test coverage is omitted. Example:
   ```zig
   // NOTE: No unit test for this log path — would require a mock session manager.
-  // Covered by manual integration testing against a running NullClaw instance.
+  // Covered by manual integration testing against a running KrustyKlaw instance.
   ```
 - **Error path resource cleanup**: when a function allocates resources before returning an error, always free them before the `return error.Foo`. Verify with `zig build test` that the test allocator reports 0 leaks.
 - Tests that were added to cover a specific fix must have a comment citing the bug they guard against, e.g.:

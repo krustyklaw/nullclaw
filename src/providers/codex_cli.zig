@@ -203,7 +203,7 @@ fn makeOutputPath(allocator: std.mem.Allocator) ![]u8 {
     const tmp_dir = try platform.getTempDir(allocator);
     defer allocator.free(tmp_dir);
 
-    const filename = try std.fmt.allocPrint(allocator, "nullclaw_codex_{d}_{x}.txt", .{
+    const filename = try std.fmt.allocPrint(allocator, "krustyklaw_codex_{d}_{x}.txt", .{
         std.time.milliTimestamp(),
         std.crypto.random.int(u64),
     });

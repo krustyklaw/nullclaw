@@ -2,7 +2,7 @@
 //!
 //! Provides reusable OAuth primitives for all providers:
 //! - PKCE challenge generation (RFC 7636)
-//! - Token storage with filesystem-based credential store (~/.nullclaw/auth.json)
+//! - Token storage with filesystem-based credential store (~/.krustyklaw/auth.json)
 //! - Device Authorization Grant flow (RFC 8628)
 
 const std = @import("std");
@@ -81,7 +81,7 @@ pub const OAuthToken = struct {
 
 // ── Credential Store ───────────────────────────────────────────────────
 
-const CRED_DIR = ".nullclaw";
+const CRED_DIR = ".krustyklaw";
 const CRED_FILE = "auth.json";
 
 fn writeCredentialsFileAtomic(allocator: std.mem.Allocator, file_path: []const u8, contents: []const u8) !void {
@@ -106,7 +106,7 @@ fn writeCredentialsFileAtomic(allocator: std.mem.Allocator, file_path: []const u
     };
 }
 
-/// Save a credential for the given provider to ~/.nullclaw/auth.json.
+/// Save a credential for the given provider to ~/.krustyklaw/auth.json.
 /// Merges with existing credentials (other providers are preserved).
 /// File permissions are set to 0o600.
 pub fn saveCredential(allocator: std.mem.Allocator, provider: []const u8, token: OAuthToken) !void {
@@ -190,7 +190,7 @@ pub fn saveCredential(allocator: std.mem.Allocator, provider: []const u8, token:
     try writeCredentialsFileAtomic(allocator, file_path, buf.items);
 }
 
-/// Load a credential for the given provider from ~/.nullclaw/auth.json.
+/// Load a credential for the given provider from ~/.krustyklaw/auth.json.
 /// Returns null if the file is missing, the provider is not found, or the token
 /// is expired and cannot be refreshed.
 pub fn loadCredential(allocator: std.mem.Allocator, provider: []const u8) !?OAuthToken {
@@ -400,7 +400,7 @@ pub fn refreshAccessToken(
 
 // ── Credential Deletion ───────────────────────────────────────────────
 
-/// Delete a credential for the given provider from ~/.nullclaw/auth.json.
+/// Delete a credential for the given provider from ~/.krustyklaw/auth.json.
 /// Returns true if the credential was found and removed.
 pub fn deleteCredential(allocator: std.mem.Allocator, provider: []const u8) !bool {
     const home = platform.getHomeDir(allocator) catch return error.HomeNotSet;

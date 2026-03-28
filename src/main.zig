@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const build_options = @import("build_options");
-const yc = @import("nullclaw");
+const yc = @import("krustyklaw");
 const control_plane = yc.control_plane;
 
 pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace, ret_addr: ?usize) noreturn {
@@ -22,6 +22,7 @@ const Command = enum {
     status,
     version,
     onboard,
+    desktop,
     doctor,
     cron,
     channel,
@@ -50,13 +51,14 @@ const MODELS_SUBCOMMANDS = "list|info|benchmark|refresh";
 const AUTH_SUBCOMMANDS = "login|status|logout";
 
 const TOP_LEVEL_USAGE = std.fmt.comptimePrint(
-    \\nullclaw -- The smallest AI assistant. Zig-powered.
+    \\krustyklaw -- The smallest AI assistant. Zig-powered.
     \\
     \\USAGE:
-    \\  nullclaw <command> [options]
+    \\  krustyklaw <command> [options]
     \\
     \\COMMANDS:
     \\  onboard      Initialize workspace and configuration
+    \\  desktop      Launch the desktop GUI (browser-based chat UI)
     \\  agent        Start the AI agent loop
     \\  gateway      Start the gateway server (HTTP/WebSocket)
     \\  service      Manage OS service lifecycle
@@ -121,6 +123,7 @@ fn parseCommand(arg: []const u8) ?Command {
         .{ "--version", .version },
         .{ "-V", .version },
         .{ "onboard", .onboard },
+        .{ "desktop", .desktop },
         .{ "doctor", .doctor },
         .{ "cron", .cron },
         .{ "channel", .channel },
@@ -161,7 +164,8 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     if (args.len < 2) {
-        printUsage();
+        // When launched with no arguments (e.g. double-clicked), start the desktop UI.
+        try yc.desktop.run(allocator);
         return;
     }
 
@@ -210,6 +214,7 @@ pub fn main() !void {
             try yc.agent.run(allocator, sub_args);
         },
         .onboard => try runOnboard(allocator, sub_args),
+        .desktop => try yc.desktop.run(allocator),
         .doctor => try yc.doctor.run(allocator),
         .help => printUsage(),
         .gateway => try runGateway(allocator, sub_args),
@@ -232,7 +237,7 @@ pub fn main() !void {
 fn printVersion() void {
     var buf: [256]u8 = undefined;
     var bw = std.fs.File.stdout().writer(&buf);
-    bw.interface.print("nullclaw {s}\n", .{yc.version.string}) catch return;
+    bw.interface.print("krustyklaw {s}\n", .{yc.version.string}) catch return;
     bw.interface.flush() catch return;
 }
 
@@ -319,7 +324,7 @@ fn applyGatewayDaemonOverrides(cfg: *yc.config.Config, sub_args: []const []const
 
 fn printGatewayUsage() void {
     std.debug.print(
-        \\Usage: nullclaw gateway [options]
+        \\Usage: krustyklaw gateway [options]
         \\
         \\Start the gateway server (HTTP/WebSocket).
         \\
@@ -334,7 +339,7 @@ fn printGatewayUsage() void {
 
 fn printAgentUsage() void {
     std.debug.print(
-        \\Usage: nullclaw agent [options]
+        \\Usage: krustyklaw agent [options]
         \\
         \\Start the AI agent loop.
         \\
@@ -357,7 +362,7 @@ fn runGateway(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
     }
 
     var cfg = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -369,7 +374,7 @@ fn runGateway(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 
     if (!yc.security.isYoloGatewayAllowed(cfg.autonomy.level, cfg.gateway.host, yc.security.isYoloForceEnabled(allocator))) {
         std.debug.print(
-            "Refusing to start gateway with autonomy.level=yolo on non-local host '{s}'. Use localhost or set NULLCLAW_ALLOW_YOLO=1 to force this insecure mode.\n",
+            "Refusing to start gateway with autonomy.level=yolo on non-local host '{s}'. Use localhost or set KRUSTYKLAW_ALLOW_YOLO=1 to force this insecure mode.\n",
             .{cfg.gateway.host},
         );
         std.process.exit(1);
@@ -405,7 +410,7 @@ fn runGateway(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 
 fn runService(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
-        std.debug.print(std.fmt.comptimePrint("Usage: nullclaw service <{s}>\n", .{SERVICE_SUBCOMMANDS}), .{});
+        std.debug.print(std.fmt.comptimePrint("Usage: krustyklaw service <{s}>\n", .{SERVICE_SUBCOMMANDS}), .{});
         std.process.exit(1);
     }
 
@@ -423,7 +428,7 @@ fn runService(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
             if (std.mem.eql(u8, subcmd, entry[0])) break :blk entry[1];
         }
         std.debug.print("Unknown service command: {s}\n", .{subcmd});
-        std.debug.print(std.fmt.comptimePrint("Usage: nullclaw service <{s}>\n", .{SERVICE_SUBCOMMANDS}), .{});
+        std.debug.print(std.fmt.comptimePrint("Usage: krustyklaw service <{s}>\n", .{SERVICE_SUBCOMMANDS}), .{});
         std.process.exit(1);
     };
 
@@ -442,11 +447,11 @@ fn runService(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
             },
             error.SystemctlUnavailable => {
                 std.debug.print("`systemctl` is not available; Linux service commands require systemd user services.\n", .{});
-                std.debug.print("Run `nullclaw gateway` in the foreground or use another supervisor.\n", .{});
+                std.debug.print("Run `krustyklaw gateway` in the foreground or use another supervisor.\n", .{});
             },
             error.SystemdUserUnavailable => {
                 std.debug.print("systemd user services are unavailable (`systemctl --user`).\n", .{});
-                std.debug.print("Verify with `systemctl --user status` or run `nullclaw gateway` in the foreground.\n", .{});
+                std.debug.print("Verify with `systemctl --user status` or run `krustyklaw gateway` in the foreground.\n", .{});
             },
             error.CommandFailed => {
                 std.debug.print("Service command failed: {s}\n", .{subcmd});
@@ -502,7 +507,7 @@ fn parseCronAddAgentOptions(sub_args: []const []const u8) !CronAddAgentOptions {
 fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw cron <{s}> [args]
+            \\Usage: krustyklaw cron <{s}> [args]
             \\
             \\Commands:
             \\  list                          List all scheduled tasks
@@ -532,13 +537,13 @@ fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         try yc.cron.cliStatus(allocator);
     } else if (std.mem.eql(u8, subcmd, "add")) {
         if (sub_args.len < 3) {
-            std.debug.print("Usage: nullclaw cron add <expression> <command>\n", .{});
+            std.debug.print("Usage: krustyklaw cron add <expression> <command>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliAddJob(allocator, sub_args[1], sub_args[2]);
     } else if (std.mem.eql(u8, subcmd, "add-agent")) {
         if (sub_args.len < 3) {
-            std.debug.print("Usage: nullclaw cron add-agent <expression> <prompt> [--model <model>] [--session-target <isolated|main>] [--announce] [--channel <name>] [--account <id>] [--to <id>]\n", .{});
+            std.debug.print("Usage: krustyklaw cron add-agent <expression> <prompt> [--model <model>] [--session-target <isolated|main>] [--announce] [--channel <name>] [--account <id>] [--to <id>]\n", .{});
             std.process.exit(1);
         }
         const options = parseCronAddAgentOptions(sub_args) catch |err| switch (err) {
@@ -551,13 +556,13 @@ fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         try yc.cron.cliAddAgentJob(allocator, sub_args[1], sub_args[2], options.model, options.session_target, options.delivery);
     } else if (std.mem.eql(u8, subcmd, "once")) {
         if (sub_args.len < 3) {
-            std.debug.print("Usage: nullclaw cron once <delay> <command>\n", .{});
+            std.debug.print("Usage: krustyklaw cron once <delay> <command>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliAddOnce(allocator, sub_args[1], sub_args[2]);
     } else if (std.mem.eql(u8, subcmd, "once-agent")) {
         if (sub_args.len < 3) {
-            std.debug.print("Usage: nullclaw cron once-agent <delay> <prompt> [--model <model>] [--session-target <isolated|main>]\n", .{});
+            std.debug.print("Usage: krustyklaw cron once-agent <delay> <prompt> [--model <model>] [--session-target <isolated|main>]\n", .{});
             std.process.exit(1);
         }
         const options = parseCronAgentOptions(sub_args, 3) catch |err| switch (err) {
@@ -570,31 +575,31 @@ fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         try yc.cron.cliAddAgentOnce(allocator, sub_args[1], sub_args[2], options.model, options.session_target);
     } else if (std.mem.eql(u8, subcmd, "remove")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron remove <id>\n", .{});
+            std.debug.print("Usage: krustyklaw cron remove <id>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliRemoveJob(allocator, sub_args[1]);
     } else if (std.mem.eql(u8, subcmd, "pause")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron pause <id>\n", .{});
+            std.debug.print("Usage: krustyklaw cron pause <id>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliPauseJob(allocator, sub_args[1]);
     } else if (std.mem.eql(u8, subcmd, "resume")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron resume <id>\n", .{});
+            std.debug.print("Usage: krustyklaw cron resume <id>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliResumeJob(allocator, sub_args[1]);
     } else if (std.mem.eql(u8, subcmd, "run")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron run <id>\n", .{});
+            std.debug.print("Usage: krustyklaw cron run <id>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliRunJob(allocator, sub_args[1]);
     } else if (std.mem.eql(u8, subcmd, "update")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron update <id> [--expression <expr>] [--command <cmd>] [--prompt <prompt>] [--model <model>] [--session-target <isolated|main>] [--enable] [--disable]\n", .{});
+            std.debug.print("Usage: krustyklaw cron update <id> [--expression <expr>] [--command <cmd>] [--prompt <prompt>] [--model <model>] [--session-target <isolated|main>] [--enable] [--disable]\n", .{});
             std.process.exit(1);
         }
         const id = sub_args[1];
@@ -642,7 +647,7 @@ fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         };
     } else if (std.mem.eql(u8, subcmd, "runs")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw cron runs <id>\n", .{});
+            std.debug.print("Usage: krustyklaw cron runs <id>\n", .{});
             std.process.exit(1);
         }
         try yc.cron.cliListRuns(allocator, sub_args[1]);
@@ -657,7 +662,7 @@ fn runCron(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 fn runChannel(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw channel <{s}> [args]
+            \\Usage: krustyklaw channel <{s}> [args]
             \\
             \\Commands:
             \\  list                          List configured channels
@@ -673,7 +678,7 @@ fn runChannel(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
     const subcmd = sub_args[0];
 
     var cfg = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -697,7 +702,7 @@ fn runChannel(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
         }
     } else if (std.mem.eql(u8, subcmd, "add")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw channel add <type>\n", .{});
+            std.debug.print("Usage: krustyklaw channel add <type>\n", .{});
             std.debug.print("Types:", .{});
             for (yc.channel_catalog.known_channels) |meta| {
                 if (meta.id == .cli) continue;
@@ -710,7 +715,7 @@ fn runChannel(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
         std.debug.print("Add a \"{s}\" object under \"channels\" with the required fields.\n", .{sub_args[1]});
     } else if (std.mem.eql(u8, subcmd, "remove")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw channel remove <name>\n", .{});
+            std.debug.print("Usage: krustyklaw channel remove <name>\n", .{});
             std.process.exit(1);
         }
         std.debug.print("To remove the '{s}' channel, edit your config file:\n  {s}\n", .{ sub_args[1], cfg.config_path });
@@ -726,7 +731,7 @@ fn runChannel(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw skills <{s}> [args]
+            \\Usage: krustyklaw skills <{s}> [args]
             \\
             \\Commands:
             \\  list [--json]                 List installed skills
@@ -739,7 +744,7 @@ fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     }
 
     var cfg = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -788,7 +793,7 @@ fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         }
     } else if (std.mem.eql(u8, subcmd, "install")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw skills install <source>\n", .{});
+            std.debug.print("Usage: krustyklaw skills install <source>\n", .{});
             std.process.exit(1);
         }
         var install_error_detail: ?[]u8 = null;
@@ -803,7 +808,7 @@ fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         std.debug.print("Skill installed from: {s}\n", .{sub_args[1]});
     } else if (std.mem.eql(u8, subcmd, "remove")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw skills remove <name>\n", .{});
+            std.debug.print("Usage: krustyklaw skills remove <name>\n", .{});
             std.process.exit(1);
         }
         yc.skills.removeSkill(allocator, sub_args[1], cfg.workspace_dir) catch |err| {
@@ -813,7 +818,7 @@ fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         std.debug.print("Removed skill: {s}\n", .{sub_args[1]});
     } else if (std.mem.eql(u8, subcmd, "info")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw skills info <name> [--json]\n", .{});
+            std.debug.print("Usage: krustyklaw skills info <name> [--json]\n", .{});
             std.process.exit(1);
         }
         const json_mode = hasJsonFlag(sub_args[2..]);
@@ -875,7 +880,7 @@ fn runSkills(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 fn runHardware(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw hardware <{s}> [args]
+            \\Usage: krustyklaw hardware <{s}> [args]
             \\
             \\Commands:
             \\  scan                          Scan for connected hardware
@@ -915,12 +920,12 @@ fn runHardware(allocator: std.mem.Allocator, sub_args: []const []const u8) !void
         }
     } else if (std.mem.eql(u8, subcmd, "flash")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw hardware flash <firmware_file> [--target <board>]\n", .{});
+            std.debug.print("Usage: krustyklaw hardware flash <firmware_file> [--target <board>]\n", .{});
             std.process.exit(1);
         }
         std.debug.print("Flash not yet implemented. Firmware file: {s}\n", .{sub_args[1]});
     } else if (std.mem.eql(u8, subcmd, "monitor")) {
-        std.debug.print("Monitor not yet implemented. Use `nullclaw hardware scan` to discover devices first.\n", .{});
+        std.debug.print("Monitor not yet implemented. Use `krustyklaw hardware scan` to discover devices first.\n", .{});
     } else {
         std.debug.print("Unknown hardware command: {s}\n", .{subcmd});
         std.process.exit(1);
@@ -932,7 +937,7 @@ fn runHardware(allocator: std.mem.Allocator, sub_args: []const []const u8) !void
 fn runMigrate(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(
-            \\Usage: nullclaw migrate <source> [options]
+            \\Usage: krustyklaw migrate <source> [options]
             \\
             \\Sources:
             \\  openclaw                      Import from OpenClaw workspace (+ config migration)
@@ -960,7 +965,7 @@ fn runMigrate(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
         }
 
         var cfg = yc.config.Config.load(allocator) catch {
-            std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+            std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
             std.process.exit(1);
         };
         defer cfg.deinit();
@@ -991,7 +996,7 @@ fn runMigrate(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 
 fn printMemoryUsage() void {
     std.debug.print(std.fmt.comptimePrint(
-        \\Usage: nullclaw memory <{s}> [args]
+        \\Usage: krustyklaw memory <{s}> [args]
         \\
         \\Commands:
         \\  stats [--json]                Show resolved memory config and key counters
@@ -1010,7 +1015,7 @@ fn printMemoryUsage() void {
 
 fn printWorkspaceUsage() void {
     std.debug.print(std.fmt.comptimePrint(
-        \\Usage: nullclaw workspace <{s}> [args]
+        \\Usage: krustyklaw workspace <{s}> [args]
         \\
         \\Commands:
         \\  edit <filename>
@@ -1064,7 +1069,7 @@ fn loadVisibleSkills(allocator: std.mem.Allocator, workspace_dir: []const u8) !V
     errdefer if (community_base) |path| allocator.free(path);
 
     if (home) |path| {
-        community_base = std.fs.path.join(allocator, &.{ path, ".nullclaw" }) catch null;
+        community_base = std.fs.path.join(allocator, &.{ path, ".krustyklaw" }) catch null;
     }
 
     if (community_base) |base| {
@@ -1238,7 +1243,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     }
 
     var cfg = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -1337,7 +1342,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 
     if (std.mem.eql(u8, subcmd, "forget")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw memory forget <key>\n", .{});
+            std.debug.print("Usage: krustyklaw memory forget <key>\n", .{});
             std.process.exit(1);
         }
         const key = sub_args[1];
@@ -1395,7 +1400,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 
     if (std.mem.eql(u8, subcmd, "get")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw memory get <key> [--json]\n", .{});
+            std.debug.print("Usage: krustyklaw memory get <key> [--json]\n", .{});
             std.process.exit(1);
         }
         const key = sub_args[1];
@@ -1453,7 +1458,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         while (i < sub_args.len) : (i += 1) {
             if (std.mem.eql(u8, sub_args[i], "--limit")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw memory list [--category C] [--limit N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw memory list [--category C] [--limit N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1463,7 +1468,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
                 };
             } else if (std.mem.eql(u8, sub_args[i], "--category")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw memory list [--category C] [--limit N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw memory list [--category C] [--limit N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1525,7 +1530,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 
     if (std.mem.eql(u8, subcmd, "search")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw memory search <query> [--limit N] [--json]\n", .{});
+            std.debug.print("Usage: krustyklaw memory search <query> [--limit N] [--json]\n", .{});
             std.process.exit(1);
         }
         const query = sub_args[1];
@@ -1536,7 +1541,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         while (i < sub_args.len) : (i += 1) {
             if (std.mem.eql(u8, sub_args[i], "--limit")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw memory search <query> [--limit N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw memory search <query> [--limit N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1611,7 +1616,7 @@ fn runMemory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw history <{s}> [args]
+            \\Usage: krustyklaw history <{s}> [args]
             \\
             \\Commands:
             \\  list [--limit N] [--offset N] [--json]
@@ -1627,9 +1632,9 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 
     var cfg = yc.config.Config.load(allocator) catch {
         if (wants_json) {
-            writeJsonError("config_not_found", "No config found -- run `nullclaw onboard` first", null);
+            writeJsonError("config_not_found", "No config found -- run `krustyklaw onboard` first", null);
         }
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -1667,7 +1672,7 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
         while (i < sub_args.len) : (i += 1) {
             if (std.mem.eql(u8, sub_args[i], "--limit")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw history list [--limit N] [--offset N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw history list [--limit N] [--offset N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1677,7 +1682,7 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
                 };
             } else if (std.mem.eql(u8, sub_args[i], "--offset")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw history list [--limit N] [--offset N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw history list [--limit N] [--offset N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1753,7 +1758,7 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 
     if (std.mem.eql(u8, subcmd, "show")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
+            std.debug.print("Usage: krustyklaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
             std.process.exit(1);
         }
         const session_id = sub_args[1];
@@ -1765,7 +1770,7 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
         while (i < sub_args.len) : (i += 1) {
             if (std.mem.eql(u8, sub_args[i], "--limit")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1775,7 +1780,7 @@ fn runHistory(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
                 };
             } else if (std.mem.eql(u8, sub_args[i], "--offset")) {
                 if (i + 1 >= sub_args.len) {
-                    std.debug.print("Usage: nullclaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
+                    std.debug.print("Usage: krustyklaw history show <session_id> [--limit N] [--offset N] [--json]\n", .{});
                     std.process.exit(1);
                 }
                 i += 1;
@@ -1919,7 +1924,7 @@ fn runWorkspace(allocator: std.mem.Allocator, sub_args: []const []const u8) !voi
     }
 
     var cfg = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer cfg.deinit();
@@ -1983,7 +1988,7 @@ fn runWorkspace(allocator: std.mem.Allocator, sub_args: []const []const u8) !voi
 
 fn runWorkspaceEdit(allocator: std.mem.Allocator, args: []const []const u8, cfg: yc.config.Config) void {
     if (args.len < 1) {
-        std.debug.print("Usage: nullclaw workspace edit <filename>\n\n", .{});
+        std.debug.print("Usage: krustyklaw workspace edit <filename>\n\n", .{});
         std.debug.print("Bootstrap files: SOUL.md, AGENTS.md, TOOLS.md, CONFIG.md, IDENTITY.md, USER.md, HEARTBEAT.md, BOOTSTRAP.md, MEMORY.md\n", .{});
         std.process.exit(1);
     }
@@ -2044,7 +2049,7 @@ fn runCapabilities(allocator: std.mem.Allocator, sub_args: []const []const u8) !
         if (sub_args.len == 1 and (std.mem.eql(u8, sub_args[0], "--json") or std.mem.eql(u8, sub_args[0], "json"))) {
             as_json = true;
         } else {
-            std.debug.print("Usage: nullclaw capabilities [--json]\n", .{});
+            std.debug.print("Usage: krustyklaw capabilities [--json]\n", .{});
             std.process.exit(1);
         }
     }
@@ -2067,7 +2072,7 @@ fn runCapabilities(allocator: std.mem.Allocator, sub_args: []const []const u8) !
 fn runModels(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
     if (sub_args.len < 1) {
         std.debug.print(std.fmt.comptimePrint(
-            \\Usage: nullclaw models <{s}> [args]
+            \\Usage: krustyklaw models <{s}> [args]
             \\
             \\Commands:
             \\  list                          List available models
@@ -2091,17 +2096,17 @@ fn runModels(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
             std.debug.print("  Model:    {s}\n", .{c.default_model orelse "(not set)"});
             std.debug.print("  Temp:     {d:.1}\n\n", .{c.default_temperature});
         } else {
-            std.debug.print("  (no config -- run `nullclaw onboard` first)\n\n", .{});
+            std.debug.print("  (no config -- run `krustyklaw onboard` first)\n\n", .{});
         }
 
         std.debug.print("Known providers and default models:\n", .{});
         for (yc.onboard.known_providers) |p| {
             std.debug.print("  {s:<12} {s:<36} {s}\n", .{ p.key, p.default_model, p.label });
         }
-        std.debug.print("\nUse `nullclaw models info <model>` for details.\n", .{});
+        std.debug.print("\nUse `krustyklaw models info <model>` for details.\n", .{});
     } else if (std.mem.eql(u8, subcmd, "info")) {
         if (sub_args.len < 2) {
-            std.debug.print("Usage: nullclaw models info <model>\n", .{});
+            std.debug.print("Usage: krustyklaw models info <model>\n", .{});
             std.process.exit(1);
         }
         std.debug.print("Model: {s}\n", .{sub_args[1]});
@@ -2110,7 +2115,7 @@ fn runModels(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         std.debug.print("  Pricing: see provider dashboard\n", .{});
     } else if (std.mem.eql(u8, subcmd, "benchmark")) {
         std.debug.print("Running model latency benchmark...\n", .{});
-        std.debug.print("Configure a provider first (nullclaw onboard).\n", .{});
+        std.debug.print("Configure a provider first (krustyklaw onboard).\n", .{});
     } else if (std.mem.eql(u8, subcmd, "refresh")) {
         try yc.onboard.runModelsRefresh(allocator);
     } else {
@@ -2201,7 +2206,7 @@ fn parseOnboardArgs(sub_args: []const []const u8) OnboardArgParseResult {
 
 fn printOnboardUsage() void {
     std.debug.print(
-        \\Usage: nullclaw onboard [--interactive | --channels-only | [--api-key KEY] [--provider PROV] [--model MODEL] [--memory MEM]]
+        \\Usage: krustyklaw onboard [--interactive | --channels-only | [--api-key KEY] [--provider PROV] [--model MODEL] [--memory MEM]]
         \\
         \\Modes:
         \\  (default)         quick setup
@@ -2215,9 +2220,9 @@ fn printOnboardUsage() void {
         \\  --memory MEM      memory backend key (e.g. markdown, sqlite, memory)
         \\
         \\Examples:
-        \\  nullclaw onboard --api-key sk-... --provider openrouter
-        \\  nullclaw onboard --api-key sk-... --provider custom:https://api.example.com/v1 --model minimaxai/minimax-m2.1
-        \\  nullclaw onboard --interactive
+        \\  krustyklaw onboard --api-key sk-... --provider openrouter
+        \\  krustyklaw onboard --api-key sk-... --provider custom:https://api.example.com/v1 --model minimaxai/minimax-m2.1
+        \\  krustyklaw onboard --interactive
         \\
     , .{});
 }
@@ -2319,10 +2324,10 @@ fn runOnboard(allocator: std.mem.Allocator, sub_args: []const []const u8) !void 
 }
 
 // ── Channel Start ────────────────────────────────────────────────
-// Usage: nullclaw channel start [channel]
+// Usage: krustyklaw channel start [channel]
 // If a channel name is given, start that specific channel.
 // Otherwise, start the first available (Telegram first, then Signal).
-// To run all configured channels/accounts together, use `nullclaw gateway`.
+// To run all configured channels/accounts together, use `krustyklaw gateway`.
 
 fn canStartFromChannelCommand(channel_id: yc.channel_catalog.ChannelId) bool {
     if (!yc.channel_catalog.isBuildEnabled(channel_id)) return false;
@@ -2508,13 +2513,13 @@ fn drainChannelStartBus(ctx: *const ChannelStartBusDrainCtx) void {
 
 fn runChannelStart(allocator: std.mem.Allocator, args: []const []const u8) !void {
     if (args.len > 0 and std.mem.eql(u8, args[0], "--all")) {
-        std.debug.print("Use `nullclaw gateway` to start all configured channels/accounts.\n", .{});
+        std.debug.print("Use `krustyklaw gateway` to start all configured channels/accounts.\n", .{});
         std.process.exit(1);
     }
 
     // Load config
     var config = yc.config.Config.load(allocator) catch {
-        std.debug.print("No config found -- run `nullclaw onboard` first\n", .{});
+        std.debug.print("No config found -- run `krustyklaw onboard` first\n", .{});
         std.process.exit(1);
     };
     defer config.deinit();
@@ -2703,14 +2708,14 @@ fn runSignalChannel(allocator: std.mem.Allocator, args: []const []const u8, conf
     const provider_kind = yc.providers.classifyProvider(config.default_provider);
     const has_fallback_credentials = hasReliabilityCredentialFallback(allocator, config);
     if (resolved_api_key == null and provider_kind != .openai_codex_provider and !has_fallback_credentials) {
-        std.debug.print("No API key configured. Set env var or add to ~/.nullclaw/config.json:\n", .{});
+        std.debug.print("No API key configured. Set env var or add to ~/.krustyklaw/config.json:\n", .{});
         std.debug.print("  \"providers\": {{ \"{s}\": {{ \"api_key\": \"...\" }} }}\n", .{config.default_provider});
         std.process.exit(1);
     }
 
     const temperature = config.default_temperature;
 
-    std.debug.print("nullclaw Signal bot starting...\n", .{});
+    std.debug.print("krustyklaw Signal bot starting...\n", .{});
     config.printModelConfig();
     std.debug.print("  Temperature: {d:.1}\n", .{temperature});
     std.debug.print("  Signal URL: {s}\n", .{signal_config.http_url});
@@ -2769,7 +2774,7 @@ fn runSignalChannel(allocator: std.mem.Allocator, args: []const []const u8, conf
     std.debug.print("  Polling for messages... (Ctrl+C to stop)\n\n", .{});
 
     // Build security policy from config
-    const security = @import("nullclaw").security.policy;
+    const security = @import("krustyklaw").security.policy;
     var tracker = security.RateTracker.init(allocator, config.autonomy.max_actions_per_hour);
     defer tracker.deinit();
 
@@ -2976,7 +2981,7 @@ fn runMatrixChannel(
 
     var mx = yc.channels.matrix.MatrixChannel.initFromConfig(allocator, matrix_config);
 
-    std.debug.print("nullclaw Matrix bot starting...\n", .{});
+    std.debug.print("krustyklaw Matrix bot starting...\n", .{});
     std.debug.print("  Provider: {s}\n", .{config.default_provider});
     std.debug.print("  Homeserver: {s}\n", .{mx.homeserver});
     std.debug.print("  Account ID: {s}\n", .{mx.account_id});
@@ -3028,11 +3033,11 @@ fn runMaxChannel(
     var mx = yc.channels.max.MaxChannel.initFromConfig(allocator, max_config);
 
     if (mx.mode == .webhook) {
-        std.debug.print("nullclaw Max channel configured for webhook delivery.\n", .{});
+        std.debug.print("krustyklaw Max channel configured for webhook delivery.\n", .{});
         return runGatewayChannel(allocator, config, "max");
     }
 
-    std.debug.print("nullclaw Max bot starting...\n", .{});
+    std.debug.print("krustyklaw Max bot starting...\n", .{});
     std.debug.print("  Provider: {s}\n", .{config.default_provider});
     std.debug.print("  Account ID: {s}\n", .{mx.account_id});
     std.debug.print("  Mode: {s}\n", .{@tagName(mx.mode)});
@@ -3207,7 +3212,7 @@ fn handleStandaloneTelegramBuiltinCommand(
 
     const confirmation = std.fmt.allocPrint(
         allocator,
-        "Created topic \"{s}\" (thread {d}). Messages in that topic will use an isolated nullclaw session.",
+        "Created topic \"{s}\" (thread {d}). Messages in that topic will use an isolated krustyklaw session.",
         .{ topic_name, thread_id },
     ) catch null;
     defer if (confirmation) |msg| allocator.free(msg);
@@ -3254,7 +3259,7 @@ fn runTelegramChannel(allocator: std.mem.Allocator, args: []const []const u8, co
     const provider_kind = yc.providers.classifyProvider(config.default_provider);
     const has_fallback_credentials = hasReliabilityCredentialFallback(allocator, &config);
     if (resolved_api_key == null and provider_kind != .openai_codex_provider and !has_fallback_credentials) {
-        std.debug.print("No API key configured. Set env var or add to ~/.nullclaw/config.json:\n", .{});
+        std.debug.print("No API key configured. Set env var or add to ~/.krustyklaw/config.json:\n", .{});
         std.debug.print("  \"providers\": {{ \"{s}\": {{ \"api_key\": \"...\" }} }}\n", .{config.default_provider});
         std.process.exit(1);
     }
@@ -3262,7 +3267,7 @@ fn runTelegramChannel(allocator: std.mem.Allocator, args: []const []const u8, co
     const model = config.default_model.?;
     const temperature = config.default_temperature;
 
-    std.debug.print("nullclaw telegram bot starting...\n", .{});
+    std.debug.print("krustyklaw telegram bot starting...\n", .{});
     std.debug.print("  Provider: {s}\n", .{config.default_provider});
     std.debug.print("  Model: {s}\n", .{model});
     std.debug.print("  Temperature: {d:.1}\n", .{temperature});
@@ -3308,7 +3313,7 @@ fn runTelegramChannel(allocator: std.mem.Allocator, args: []const []const u8, co
     if (whisper_ptr) |wt| tg.transcriber = wt.transcriber();
 
     // Build security policy from config
-    const security = @import("nullclaw").security.policy;
+    const security = @import("krustyklaw").security.policy;
     var tracker = security.RateTracker.init(allocator, config.autonomy.max_actions_per_hour);
     defer tracker.deinit();
 
@@ -3596,10 +3601,10 @@ fn runAuth(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
         } else if (yc.codex_support.hasOpenAiCodexCredential(allocator)) {
             std.debug.print("openai-codex: authenticated via Codex CLI\n", .{});
             std.debug.print("  Tokens found in ~/.codex/auth.json\n", .{});
-            std.debug.print("  Run `nullclaw auth login openai-codex --import-codex` to persist them in ~/.nullclaw/auth.json.\n", .{});
+            std.debug.print("  Run `krustyklaw auth login openai-codex --import-codex` to persist them in ~/.krustyklaw/auth.json.\n", .{});
         } else {
             std.debug.print("openai-codex: not authenticated\n", .{});
-            std.debug.print("  Run `nullclaw auth login openai-codex` to authenticate.\n", .{});
+            std.debug.print("  Run `krustyklaw auth login openai-codex` to authenticate.\n", .{});
         }
     } else if (std.mem.eql(u8, subcmd, "logout")) {
         if (auth_mod.deleteCredential(allocator, codex.CREDENTIAL_KEY) catch false) {
@@ -3627,7 +3632,7 @@ fn runUpdate(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
             opts.yes = true;
         } else {
             std.debug.print("Unknown option: {s}\n", .{sub_args[i]});
-            std.debug.print("Usage: nullclaw update [--check] [--yes]\n", .{});
+            std.debug.print("Usage: krustyklaw update [--check] [--yes]\n", .{});
             std.process.exit(1);
         }
     }
@@ -3640,7 +3645,7 @@ fn runUpdate(allocator: std.mem.Allocator, sub_args: []const []const u8) !void {
 
 fn printAuthUsage() void {
     std.debug.print(std.fmt.comptimePrint(
-        \\Usage: nullclaw auth <{s}> <provider> [options]
+        \\Usage: krustyklaw auth <{s}> <provider> [options]
         \\
         \\Commands:
         \\  login <provider>                    Authenticate via device code flow
@@ -3652,10 +3657,10 @@ fn printAuthUsage() void {
         \\  openai-codex    ChatGPT Plus/Pro subscription (OAuth)
         \\
         \\Examples:
-        \\  nullclaw auth login openai-codex
-        \\  nullclaw auth login openai-codex --import-codex
-        \\  nullclaw auth status openai-codex
-        \\  nullclaw auth logout openai-codex
+        \\  krustyklaw auth login openai-codex
+        \\  krustyklaw auth login openai-codex --import-codex
+        \\  krustyklaw auth status openai-codex
+        \\  krustyklaw auth logout openai-codex
         \\
     , .{AUTH_SUBCOMMANDS}), .{});
 }
@@ -3675,7 +3680,7 @@ fn runAuthDeviceCodeLogin(
     ) catch {
         std.debug.print("Failed to start device code flow (likely Cloudflare block).\n", .{});
         std.debug.print("Alternative:\n", .{});
-        std.debug.print("  nullclaw auth login openai-codex --import-codex   (import from Codex CLI)\n", .{});
+        std.debug.print("  krustyklaw auth login openai-codex --import-codex   (import from Codex CLI)\n", .{});
         std.process.exit(1);
     };
     defer dc.deinit(allocator);
@@ -3821,7 +3826,7 @@ fn runAuthImportCodex(
             std.debug.print("  Token: expired (will auto-refresh)\n", .{});
         }
     }
-    std.debug.print("\nTo use: set \"agents.defaults.model.primary\": \"openai-codex/{s}\" in ~/.nullclaw/config.json\n", .{yc.codex_support.DEFAULT_CODEX_MODEL});
+    std.debug.print("\nTo use: set \"agents.defaults.model.primary\": \"openai-codex/{s}\" in ~/.krustyklaw/config.json\n", .{yc.codex_support.DEFAULT_CODEX_MODEL});
 }
 
 /// Decode the "exp" claim from a JWT, returning the Unix timestamp or 0 if not decodable.
@@ -3875,7 +3880,7 @@ fn saveAndPrintResult(
     } else {
         std.debug.print("Authenticated successfully.\n", .{});
     }
-    std.debug.print("\nTo use: set \"agents.defaults.model.primary\": \"openai-codex/{s}\" in ~/.nullclaw/config.json\n", .{yc.codex_support.DEFAULT_CODEX_MODEL});
+    std.debug.print("\nTo use: set \"agents.defaults.model.primary\": \"openai-codex/{s}\" in ~/.krustyklaw/config.json\n", .{yc.codex_support.DEFAULT_CODEX_MODEL});
 }
 
 fn printUsage() void {
@@ -3997,7 +4002,7 @@ test "writeJsonString wraps and escapes special characters" {
 
 test "skillSource distinguishes workspace and community skills" {
     const workspace_dir = "/tmp/ws";
-    const community_base = "/tmp/home/.nullclaw/skills";
+    const community_base = "/tmp/home/.krustyklaw/skills";
 
     const workspace_skill = yc.skills.Skill{
         .name = "local",
@@ -4010,7 +4015,7 @@ test "skillSource distinguishes workspace and community skills" {
     const community_skill = yc.skills.Skill{
         .name = "shared",
         .version = "1.0.0",
-        .path = "/tmp/home/.nullclaw/skills/shared",
+        .path = "/tmp/home/.krustyklaw/skills/shared",
         .instructions = "",
     };
     try std.testing.expectEqualStrings("community", skillSource(workspace_dir, community_base, community_skill));
@@ -4076,8 +4081,8 @@ test "parseOnboardArgs rejects positional arguments" {
 
 test "applyGatewayDaemonOverrides applies CLI port before validation" {
     var cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
     };
@@ -4092,8 +4097,8 @@ test "applyGatewayDaemonOverrides applies CLI port before validation" {
 
 test "applyGatewayDaemonOverrides applies host override" {
     var cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
     };
@@ -4104,8 +4109,8 @@ test "applyGatewayDaemonOverrides applies host override" {
 
 test "applyGatewayDaemonOverrides rejects invalid port" {
     var cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
     };
@@ -4115,8 +4120,8 @@ test "applyGatewayDaemonOverrides rejects invalid port" {
 
 test "hasConfiguredStartableChannels ignores cli and webhook-only defaults" {
     const cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
         .channels = .{
@@ -4130,8 +4135,8 @@ test "hasConfiguredStartableChannels ignores cli and webhook-only defaults" {
 
 test "hasConfiguredStartableChannels returns true when telegram configured" {
     const cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
         .channels = .{
@@ -4147,8 +4152,8 @@ test "hasConfiguredStartableChannels returns true when telegram configured" {
 
 test "resolveConfiguredRuntimeChannel matches external plugin name" {
     const cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
         .channels = .{
@@ -4157,7 +4162,7 @@ test "resolveConfiguredRuntimeChannel matches external plugin name" {
                     .account_id = "main",
                     .runtime_name = "whatsapp_web",
                     .transport = .{
-                        .command = "nullclaw-plugin-whatsapp-web",
+                        .command = "krustyklaw-plugin-whatsapp-web",
                     },
                 },
             },
@@ -4172,8 +4177,8 @@ test "resolveConfiguredRuntimeChannel matches external plugin name" {
 
 test "resolveConfiguredRuntimeChannel matches custom maixcam name" {
     const cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
         .channels = .{
@@ -4194,8 +4199,8 @@ test "resolveConfiguredRuntimeChannel matches custom maixcam name" {
 
 test "hasConfiguredButBuildDisabledStartableChannels detects configured disabled channel" {
     const cfg = yc.config.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_model = "openrouter/auto",
         .allocator = std.testing.allocator,
         .channels = .{

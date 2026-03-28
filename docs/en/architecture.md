@@ -1,6 +1,6 @@
 # Architecture
 
-NullClaw uses a vtable-driven pluggable architecture. Most capabilities are extended by implementing interfaces and registering factories.
+KrustyKlaw uses a vtable-driven pluggable architecture. Most capabilities are extended by implementing interfaces and registering factories.
 
 ## Page Guide
 

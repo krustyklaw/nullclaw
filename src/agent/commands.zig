@@ -429,7 +429,7 @@ test "bareSessionResetPrompt returns prompt for bare /new" {
 }
 
 test "bareSessionResetPrompt returns prompt for bare /reset with mention" {
-    const prompt = bareSessionResetPrompt("/reset@nullclaw_bot:") orelse return error.TestExpectedEqual;
+    const prompt = bareSessionResetPrompt("/reset@krustyklaw_bot:") orelse return error.TestExpectedEqual;
     try std.testing.expect(std.mem.indexOf(u8, prompt, "A new session was started via /new or /reset") != null);
 }
 
@@ -438,7 +438,7 @@ test "bareSessionResetPrompt ignores /reset with argument" {
 }
 
 test "planTurnInput routes bare reset through local clear and llm prompt" {
-    const plan = planTurnInput("/reset@nullclaw_bot:");
+    const plan = planTurnInput("/reset@krustyklaw_bot:");
     try std.testing.expect(plan.clear_session);
     try std.testing.expect(plan.invoke_local_handler);
     try std.testing.expectEqualStrings(BARE_SESSION_RESET_PROMPT, plan.llm_user_message.?);
@@ -641,8 +641,8 @@ test "applyHotReloadConfig restores resolved defaults and invalidates prompt cac
     defer if (dummy.system_prompt_model_name) |model_name| allocator.free(model_name);
 
     var cfg = config_module.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_provider = "openrouter",
         .default_model = "gpt-4o",
         .allocator = allocator,
@@ -780,8 +780,8 @@ test "applyHotReloadConfig updates active profile overrides when runtime provide
         },
     };
     const cfg = config_module.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_provider = "openrouter",
         .default_model = "gpt-4o",
         .default_temperature = 0.7,
@@ -850,8 +850,8 @@ test "applyHotReloadConfig clears removed profile overrides and skips provider r
         },
     };
     const cfg = config_module.Config{
-        .workspace_dir = "/tmp/nullclaw-test",
-        .config_path = "/tmp/nullclaw-test/config.json",
+        .workspace_dir = "/tmp/krustyklaw-test",
+        .config_path = "/tmp/krustyklaw-test/config.json",
         .default_provider = "openrouter",
         .default_model = "gpt-4o",
         .default_temperature = 0.7,
@@ -1557,7 +1557,7 @@ fn formatStatus(self: anytype) ![]const u8 {
     const ttl_label = if (show_emojis) "⏰ Session TTL" else "Session TTL";
     const tasks_label = if (show_emojis) "🧵 Tasks" else "Tasks";
 
-    try w.print("{s}NullClaw {s}\n", .{ title_prefix, version.string });
+    try w.print("{s}KrustyKlaw {s}\n", .{ title_prefix, version.string });
     if (@hasField(@TypeOf(self.*), "profile_name")) {
         try w.print("Agent profile: {s}\n", .{self.profile_name orelse "default"});
     }

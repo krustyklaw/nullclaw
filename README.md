@@ -1,12 +1,12 @@
-Want a simpler way to install and configure nullclaw with a UI? Try [nullhub](https://github.com/nullclaw/nullhub)! (currently in beta)
+Want a simpler way to install and configure krustyklaw with a UI? Try [nullhub](https://github.com/krustyklaw/nullhub)! (currently in beta)
 
-[nullhub](https://github.com/nullclaw/nullhub) provides a UI layer for the Null ecosystem: simpler nullclaw setup and configuration, orchestration from [nullboiler](https://github.com/nullclaw/nullboiler), observability from [nullwatch](https://github.com/nullclaw/nullwatch), and task tracking from [nulltickets](https://github.com/nullclaw/nulltickets).
+[nullhub](https://github.com/krustyklaw/nullhub) provides a UI layer for the Null ecosystem: simpler krustyklaw setup and configuration, orchestration from [nullboiler](https://github.com/krustyklaw/nullboiler), observability from [nullwatch](https://github.com/krustyklaw/nullwatch), and task tracking from [nulltickets](https://github.com/krustyklaw/nulltickets).
 
 <p align="center">
-  <img src="nullclaw.png" alt="nullclaw" width="200" />
+  <img src="krustyklaw.png" alt="krustyklaw" width="200" />
 </p>
 
-<h1 align="center">NullClaw</h1>
+<h1 align="center">KrustyKlaw</h1>
 
 <p align="center">
   <strong>Null overhead. Null compromise. 100% Zig. 100% Agnostic.</strong><br>
@@ -14,8 +14,8 @@ Want a simpler way to install and configure nullclaw with a UI? Try [nullhub](ht
 </p>
 
 <p align="center">
-  <a href="https://github.com/nullclaw/nullclaw/actions/workflows/ci.yml"><img src="https://github.com/nullclaw/nullclaw/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://nullclaw.github.io"><img src="https://img.shields.io/badge/docs-nullclaw.github.io-informational" alt="Documentation" /></a>
+  <a href="https://github.com/krustyklaw/krustyklaw/actions/workflows/ci.yml"><img src="https://github.com/krustyklaw/krustyklaw/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://krustyklaw.github.io"><img src="https://img.shields.io/badge/docs-krustyklaw.github.io-informational" alt="Documentation" /></a>
   <a href="https://discord.gg/Bfmdua22Ud"><img src="https://img.shields.io/badge/discord-join%20community-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
 </p>
@@ -36,7 +36,7 @@ Docs: [English](docs/en/README.md) · [中文](docs/zh/README.md) · [Contributi
 - **True Portability:** Single self-contained binary across ARM, x86, and RISC-V. Drop it anywhere, it just runs.
 - **Feature-Complete:** 50+ providers, 19 channels, 35+ tools, 10 memory engines, multi-layer sandbox, tunnels, hardware peripherals, MCP, subagents, streaming, voice — the full stack.
 
-### Why nullclaw
+### Why krustyklaw
 
 - **Lean by default:** Zig compiles to a tiny static binary. No allocator overhead, no garbage collector, no runtime.
 - **Secure by design:** pairing, strict sandboxing (landlock, firejail, bubblewrap, docker), explicit allowlists, workspace scoping, encrypted secrets.
@@ -47,7 +47,7 @@ Docs: [English](docs/en/README.md) · [中文](docs/zh/README.md) · [Contributi
 
 Local machine benchmark (macOS arm64, Feb 2026), normalized for 0.8 GHz edge hardware.
 
-| | [OpenClaw](https://github.com/openclaw/openclaw) | [NanoBot](https://github.com/HKUDS/nanobot) | [PicoClaw](https://github.com/sipeed/picoclaw) | [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) | **[🦞 NullClaw](https://github.com/nullclaw/nullclaw)** |
+| | [OpenClaw](https://github.com/openclaw/openclaw) | [NanoBot](https://github.com/HKUDS/nanobot) | [PicoClaw](https://github.com/sipeed/picoclaw) | [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) | **[🦞 KrustyKlaw](https://github.com/krustyklaw/krustyklaw)** |
 |---|---|---|---|---|---|
 | **Language** | TypeScript | Python | Go | Rust | **Zig** |
 | **RAM** | > 1 GB | > 100 MB | < 10 MB | < 5 MB | **~1 MB** |
@@ -57,21 +57,21 @@ Local machine benchmark (macOS arm64, Feb 2026), normalized for 0.8 GHz edge har
 | **Source Files** | ~400+ | — | — | ~120 | **~230** |
 | **Cost** | Mac Mini $599 | Linux SBC ~$50 | Linux Board $10 | Any $10 hardware | **Any $5 hardware** |
 
-> Measured with `/usr/bin/time -l` on ReleaseSmall builds. nullclaw is a static binary with zero runtime dependencies.
+> Measured with `/usr/bin/time -l` on ReleaseSmall builds. krustyklaw is a static binary with zero runtime dependencies.
 
 Reproduce locally:
 
 ```bash
 zig build -Doptimize=ReleaseSmall
-ls -lh zig-out/bin/nullclaw
+ls -lh zig-out/bin/krustyklaw
 
-/usr/bin/time -l zig-out/bin/nullclaw --help
-/usr/bin/time -l zig-out/bin/nullclaw status
+/usr/bin/time -l zig-out/bin/krustyklaw --help
+/usr/bin/time -l zig-out/bin/krustyklaw status
 ```
 
 ## Documentation
 
-Start here if you want the shortest path to install, configure, operate, or extend nullclaw.
+Start here if you want the shortest path to install, configure, operate, or extend krustyklaw.
 
 Localized documentation lives under `docs/en/` and `docs/zh/`. Use the links below to jump straight to the page you need.
 
@@ -95,7 +95,7 @@ Localized documentation lives under `docs/en/` and `docs/zh/`. Use the links bel
 |---|---|---|
 | First run in English | [`docs/en/README.md`](docs/en/README.md) | [`docs/en/installation.md`](docs/en/installation.md) → [`docs/en/configuration.md`](docs/en/configuration.md) → [`docs/en/usage.md`](docs/en/usage.md) |
 | Chinese Quick Start (中文快速上手) | [`docs/zh/README.md`](docs/zh/README.md) | [`docs/zh/installation.md`](docs/zh/installation.md) → [`docs/zh/configuration.md`](docs/zh/configuration.md) → [`docs/zh/usage.md`](docs/zh/usage.md) |
-| Find the right CLI command | [`docs/en/commands.md`](docs/en/commands.md) / [`docs/zh/commands.md`](docs/zh/commands.md) | `nullclaw help` → task-specific subcommand page |
+| Find the right CLI command | [`docs/en/commands.md`](docs/en/commands.md) / [`docs/zh/commands.md`](docs/zh/commands.md) | `krustyklaw help` → task-specific subcommand page |
 | Contribute code or docs | [`CONTRIBUTING.md`](CONTRIBUTING.md) | [`docs/en/development.md`](docs/en/development.md) / [`docs/zh/development.md`](docs/zh/development.md) → relevant architecture page |
 | Operate or secure a deployment | [`docs/en/usage.md`](docs/en/usage.md) / [`docs/zh/usage.md`](docs/zh/usage.md) | [`docs/en/security.md`](docs/en/security.md) / [`docs/zh/security.md`](docs/zh/security.md) → Gateway API |
 
@@ -112,8 +112,8 @@ Localized documentation lives under `docs/en/` and `docs/zh/`. Use the links bel
 The simplest path: install a ready-to-run binary with no extra runtime dependencies.
 
 ```bash
-brew install nullclaw
-nullclaw --help
+brew install krustyklaw
+krustyklaw --help
 ```
 
 ### 2) Build from source
@@ -123,13 +123,13 @@ nullclaw --help
 > Verify before building: `zig version` should print `0.15.2`.
 
 ```bash
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig build -Doptimize=ReleaseSmall
 zig build test --summary all
 ```
 
-Make `nullclaw` available on `PATH`:
+Make `krustyklaw` available on `PATH`:
 
 macOS/Linux (zsh/bash):
 
@@ -155,7 +155,7 @@ $env:Path = "$env:Path;$bin"
 Then:
 
 ```bash
-nullclaw --help
+krustyklaw --help
 ```
 
 ### 3) Common commands
@@ -163,43 +163,43 @@ nullclaw --help
 ```bash
 
 # Quick setup
-nullclaw onboard --api-key sk-... --provider openrouter
+krustyklaw onboard --api-key sk-... --provider openrouter
 
 # Or interactive wizard
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 
 # Chat
-nullclaw agent -m "Hello, nullclaw!"
+krustyklaw agent -m "Hello, krustyklaw!"
 
 # Interactive mode
-nullclaw agent
+krustyklaw agent
 
 # Start gateway runtime (gateway + all configured channels/accounts + heartbeat + scheduler)
-nullclaw gateway                # default: 127.0.0.1:3000
-nullclaw gateway --port 8080    # custom port
+krustyklaw gateway                # default: 127.0.0.1:3000
+krustyklaw gateway --port 8080    # custom port
 
 # Check status
-nullclaw status
+krustyklaw status
 
 # Run system diagnostics
-nullclaw doctor
+krustyklaw doctor
 
 # Check channel health
-nullclaw channel status
+krustyklaw channel status
 
 # Start specific channels
-nullclaw channel start telegram
-nullclaw channel start discord
-nullclaw channel start signal
+krustyklaw channel start telegram
+krustyklaw channel start discord
+krustyklaw channel start signal
 
 # Manage background service
 # Linux supports systemd user services and OpenRC
-nullclaw service install
-nullclaw service status
+krustyklaw service install
+krustyklaw service status
 
 # Migrate memory from OpenClaw
-nullclaw migrate openclaw --dry-run
-nullclaw migrate openclaw
+krustyklaw migrate openclaw --dry-run
+krustyklaw migrate openclaw
 ```
 
 ## Edge MVP (Hybrid Host + WASM Logic)
@@ -260,7 +260,7 @@ All custom, zero external dependencies for the core path:
 
 ## Security
 
-nullclaw enforces security at **every layer**.
+krustyklaw enforces security at **every layer**.
 
 | # | Item | Status | How |
 |---|------|--------|-----|
@@ -283,14 +283,14 @@ Nostr additionally: the `owner_pubkey` is **always** allowed regardless of `dm_a
 
 ### Nostr Channel Setup
 
-`nullclaw` speaks Nostr natively via NIP-17 (gift-wrapped private DMs) and NIP-04 (legacy DMs), using [`nak`](https://github.com/fiatjaf/nak).
+`krustyklaw` speaks Nostr natively via NIP-17 (gift-wrapped private DMs) and NIP-04 (legacy DMs), using [`nak`](https://github.com/fiatjaf/nak).
 
 **Prerequisites:** Install `nak` and ensure it's in your `$PATH`.
 
 **Setup via onboarding wizard:**
 
 ```bash
-nullclaw onboard --interactive   # Step 7 configures Nostr
+krustyklaw onboard --interactive   # Step 7 configures Nostr
 ```
 
 The wizard will:
@@ -301,20 +301,20 @@ The wizard will:
 
 Or configure manually in the [config](#configuration).
 
-**How it works:** On startup, nullclaw announces its DM inbox relays (kind:10050), then listens for incoming NIP-17 gift wraps and NIP-04 encrypted DMs. Outbound messages mirror the sender's protocol. Multi-relay rumor deduplication prevents duplicate responses when the same message is delivered via multiple relays.
+**How it works:** On startup, krustyklaw announces its DM inbox relays (kind:10050), then listens for incoming NIP-17 gift wraps and NIP-04 encrypted DMs. Outbound messages mirror the sender's protocol. Multi-relay rumor deduplication prevents duplicate responses when the same message is delivered via multiple relays.
 
 ## Configuration
 
-Config: `~/.nullclaw/config.json` (created by `onboard`)
+Config: `~/.krustyklaw/config.json` (created by `onboard`)
 
-> **OpenClaw compatible:** nullclaw uses the same config structure as [OpenClaw](https://github.com/openclaw/openclaw) (snake_case). Providers live under `models.providers`, the default model under `agents.defaults.model.primary`, and channels use `accounts` wrappers.
+> **OpenClaw compatible:** krustyklaw uses the same config structure as [OpenClaw](https://github.com/openclaw/openclaw) (snake_case). Providers live under `models.providers`, the default model under `agents.defaults.model.primary`, and channels use `accounts` wrappers.
 > Top-level `default_provider` / `default_model` keys are not supported.
 >
 > **Vertex AI note:** `models.providers.vertex.api_key` supports either:
 > 1. a bearer token (`ya29...`), or
 > 2. a full Google service-account JSON object (same shape as Apps Script `GEMINI_KEY` with `project_id`, `client_email`, `private_key`).
 >
-> `models.providers.vertex.base_url` can be set explicitly (`.../projects/<id>/locations/<loc>/publishers/google/models`), or omitted when service-account JSON is used (nullclaw will derive it from `project_id`, with `VERTEX_LOCATION` defaulting to `global`).
+> `models.providers.vertex.base_url` can be set explicitly (`.../projects/<id>/locations/<loc>/publishers/google/models`), or omitted when service-account JSON is used (krustyklaw will derive it from `project_id`, with `VERTEX_LOCATION` defaulting to `global`).
 > Service-account mode requires `openssl` available in `$PATH` for RS256 JWT signing.
 
 ```json
@@ -374,15 +374,15 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
         "main": {
           "host": "irc.libera.chat",
           "port": 6697,
-          "nick": "nullclaw",
-          "channel": "#nullclaw",
+          "nick": "krustyklaw",
+          "channel": "#krustyklaw",
           "tls": true,
           "allow_from": ["user1"]
         },
         "meshrelay": {
           "host": "irc.meshrelay.xyz",
           "port": 6697,
-          "nick": "nullclaw",
+          "nick": "krustyklaw",
           "channels": ["#agents"],
           "tls": true,
           "nickserv_password": "YOUR_NICKSERV_PASSWORD",
@@ -404,9 +404,9 @@ Config: `~/.nullclaw/config.json` (created by `onboard`)
       "owner_pubkey": "hex-pubkey-of-owner",
       "relays": ["wss://relay.damus.io", "wss://nos.lol", "wss://relay.nostr.band"],
       "dm_allowed_pubkeys": ["*"],
-      "display_name": "NullClaw",
+      "display_name": "KrustyKlaw",
       "about": "AI assistant on Nostr",
-      "nip05": "nullclaw@yourdomain.com",
+      "nip05": "krustyklaw@yourdomain.com",
       "lnurl": "lnurl1..."
     }
   },
@@ -528,7 +528,7 @@ Named agent profiles are configured separately from bindings. Bindings only choo
 If a named agent should run from its own workspace, set `agents.list[].workspace_path`.
 Relative paths are resolved from the directory that contains `config.json`, the workspace is scaffolded on first use, and the agent gets a durable memory namespace `agent:<agent-id>`.
 Setting `workspace_path` does not disable `system_prompt`: when both are configured, the named profile prompt is still applied and the workspace bootstrap files are loaded from that dedicated workspace.
-This applies to `nullclaw agent --agent <id>`, `/subagents spawn --agent <id>`, and routed sessions resolved through `bindings`.
+This applies to `krustyklaw agent --agent <id>`, `/subagents spawn --agent <id>`, and routed sessions resolved through `bindings`.
 
 Minimal end-to-end example:
 
@@ -579,9 +579,9 @@ Minimal end-to-end example:
 Operator flow:
 
 - Send `/bind coder` inside the target forum topic.
-- `nullclaw` writes a new exact `bindings[]` entry to `~/.nullclaw/config.json` for that topic and Telegram account.
+- `krustyklaw` writes a new exact `bindings[]` entry to `~/.krustyklaw/config.json` for that topic and Telegram account.
 - The next message in that topic uses the new routed agent profile.
-- `nullclaw` must have write access to `~/.nullclaw/config.json` for `/bind` to persist changes.
+- `krustyklaw` must have write access to `~/.krustyklaw/config.json` for `/bind` to persist changes.
 
 About `account_id`:
 
@@ -589,7 +589,7 @@ About `account_id`:
 - In the usual `channels.telegram.accounts` form, the object key becomes the account id. For example, `accounts.main` means `account_id = "main"`, and `accounts.backup` means `account_id = "backup"`.
 - In `bindings`, `match.account_id` limits that binding to one specific Telegram account.
 - If `match.account_id` is omitted, the binding can match any Telegram account for that channel.
-- Use different account ids only when you run multiple Telegram bot accounts/tokens in the same nullclaw instance.
+- Use different account ids only when you run multiple Telegram bot accounts/tokens in the same krustyklaw instance.
 
 Effect on delivery:
 
@@ -663,7 +663,7 @@ Use `channels.web` for browser UI events (WebChannel v1):
 - `/ws` is the WebSocket endpoint. `/pair` belongs to the HTTP gateway API and is not part of the web channel handshake.
 - Remote/headless host: if you bind `"listen": "0.0.0.0"`, prefer a stable configured token plus `message_auth_mode: "token"` behind TLS/reverse proxy, or keep loopback bind and expose it through SSH tunnel/proxy.
 - UI/extension should live in a separate repository and connect via this WebSocket endpoint.
-- For orchestration, use local token mode with a stable token from config or env (`NULLCLAW_WEB_TOKEN`, `NULLCLAW_GATEWAY_TOKEN`, `OPENCLAW_GATEWAY_TOKEN`).
+- For orchestration, use local token mode with a stable token from config or env (`KRUSTYKLAW_WEB_TOKEN`, `KRUSTYKLAW_GATEWAY_TOKEN`, `OPENCLAW_GATEWAY_TOKEN`).
 - Relay transport (outbound agent socket) is configured via:
 
 ```json
@@ -673,7 +673,7 @@ Use `channels.web` for browser UI events (WebChannel v1):
       "accounts": {
         "default": {
           "transport": "relay",
-          "relay_url": "wss://relay.nullclaw.io/ws/agent",
+          "relay_url": "wss://relay.krustyklaw.io/ws/agent",
           "relay_agent_id": "default",
           "relay_token": "replace-with-relay-token",
           "relay_token_ttl_secs": 2592000,
@@ -687,7 +687,7 @@ Use `channels.web` for browser UI events (WebChannel v1):
 }
 ```
 
-- Relay token lifecycle (dedicated): `relay_token` (config) -> `NULLCLAW_RELAY_TOKEN` (env) -> persisted `web-relay-<account_id>` credential -> generated token.
+- Relay token lifecycle (dedicated): `relay_token` (config) -> `KRUSTYKLAW_RELAY_TOKEN` (env) -> persisted `web-relay-<account_id>` credential -> generated token.
 - Relay UI handshake: send `pairing_request` with one-time `pairing_code`, receive `pairing_result` with UI `access_token` JWT (and optional `set_cookie` string for relay HTTP layer).
 - Relay `user_message` must include valid UI JWT in `access_token` (top-level or `payload.access_token`).
 - If E2E is enabled (`relay_e2e_required=true`), UI and agent exchange X25519 keys during pairing and send encrypted payloads in `payload.e2e`.
@@ -707,15 +707,15 @@ Use `channels.web` for browser UI events (WebChannel v1):
 
 ### A2A (Agent-to-Agent Protocol v0.3.0)
 
-NullClaw implements Google's [A2A protocol](https://github.com/google/A2A) v0.3.0, allowing any A2A-compatible agent or client to discover, authenticate, and interact with your instance over JSON-RPC 2.0.
+KrustyKlaw implements Google's [A2A protocol](https://github.com/google/A2A) v0.3.0, allowing any A2A-compatible agent or client to discover, authenticate, and interact with your instance over JSON-RPC 2.0.
 
-Enable in `~/.nullclaw/config.json`:
+Enable in `~/.krustyklaw/config.json`:
 
 ```json
 {
   "a2a": {
     "enabled": true,
-    "name": "nullclaw",
+    "name": "krustyklaw",
     "description": "General-purpose AI assistant",
     "url": "https://example.com",
     "version": "1.0.0"
@@ -835,13 +835,13 @@ src/
 
 ## Versioning
 
-nullclaw uses **CalVer** (`YYYY.M.D`) for releases — e.g. `v2026.2.20`.
+krustyklaw uses **CalVer** (`YYYY.M.D`) for releases — e.g. `v2026.2.20`.
 
 - **Tag format:** `vYYYY.M.D` (one release per day max; patch suffix `vYYYY.M.D.N` if needed)
-- **Release binaries derive their embedded version from the git tag** (`v...` -> `nullclaw --version`)
+- **Release binaries derive their embedded version from the git tag** (`v...` -> `krustyklaw --version`)
 - **Non-release builds default to `dev`** unless you override with `zig build -Dversion=...`
 - **No stability guarantees yet** — the project is pre-1.0, config and CLI may change between releases
-- **`nullclaw --version`** prints the current version
+- **`krustyklaw --version`** prints the current version
 
 ## Contributing
 
@@ -856,7 +856,7 @@ Implement a vtable interface, submit a PR:
 - New `Tunnel` -> `src/tunnel.zig`
 - New `Sandbox` backend -> `src/security/`
 - New `Peripheral` -> `src/peripherals.zig`
-- New `Skill` -> `~/.nullclaw/workspace/skills/<name>/`
+- New `Skill` -> `~/.krustyklaw/workspace/skills/<name>/`
 
 ## Chinese Docs (中文文档)
 
@@ -884,7 +884,7 @@ Implement a vtable interface, submit a PR:
 
 ## Disclaimer
 
-nullclaw is a pure open-source software project. It has **no token, no cryptocurrency, no blockchain component, and no financial instrument** of any kind. This project is not affiliated with any token or financial product.
+krustyklaw is a pure open-source software project. It has **no token, no cryptocurrency, no blockchain component, and no financial instrument** of any kind. This project is not affiliated with any token or financial product.
 
 ## License
 
@@ -892,8 +892,8 @@ MIT — see [LICENSE](LICENSE)
 
 ---
 
-**nullclaw** — Null overhead. Null compromise. Deploy anywhere. Swap anything.
+**krustyklaw** — Null overhead. Null compromise. Deploy anywhere. Swap anything.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=nullclaw/nullclaw&type=date&legend=top-left)](https://www.star-history.com/#nullclaw/nullclaw&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=krustyklaw/krustyklaw&type=date&legend=top-left)](https://www.star-history.com/#krustyklaw/krustyklaw&type=date&legend=top-left)

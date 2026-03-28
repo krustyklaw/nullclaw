@@ -1,6 +1,6 @@
 # Configuration
 
-NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys.
+KrustyKlaw is compatible with OpenClaw config structure and uses `snake_case` keys.
 
 ## Page Guide
 
@@ -8,7 +8,7 @@ NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys
 
 - Users creating or editing the main `config.json`
 - Operators tuning channels, gateway behavior, and autonomy limits
-- Migrators mapping existing OpenClaw-style settings into NullClaw
+- Migrators mapping existing OpenClaw-style settings into KrustyKlaw
 
 **Read this next**
 
@@ -19,19 +19,19 @@ NullClaw is compatible with OpenClaw config structure and uses `snake_case` keys
 
 **If you came from ...**
 
-- [Installation](./installation.md): this page takes over once `nullclaw` is installed and ready for first-run setup
+- [Installation](./installation.md): this page takes over once `krustyklaw` is installed and ready for first-run setup
 - [README](./README.md): this is the detailed config path after choosing the operator/user docs route
 - [Gateway API](./gateway-api.md): come back here when the API workflow depends on concrete `gateway` or channel settings
 
 ## Config File Path
 
-- macOS/Linux: `~/.nullclaw/config.json`
-- Windows: `%USERPROFILE%\\.nullclaw\\config.json`
+- macOS/Linux: `~/.krustyklaw/config.json`
+- Windows: `%USERPROFILE%\\.krustyklaw\\config.json`
 
 Recommended first step:
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 This generates your initial config file.
@@ -104,7 +104,7 @@ Example:
     "log_llm_io": true,
     "otel": {
       "endpoint": "http://otel:4318",
-      "service_name": "nullclaw",
+      "service_name": "krustyklaw",
       "headers": {
         "Authorization": "Bearer example-token"
       }
@@ -148,11 +148,11 @@ Common per-provider fields:
 
 ### `model_routes`
 
-- Optional top-level routing table for automatic per-turn model selection in `nullclaw agent`.
+- Optional top-level routing table for automatic per-turn model selection in `krustyklaw agent`.
 - Each entry maps a route `hint` to a concrete `provider` and `model`.
 - Recognized routing hints in the current daemon are `fast`, `balanced`, `deep`, `reasoning`, and `vision`.
 - `balanced` is the normal fallback when configured. `fast` is preferred for short status/list/check prompts and other short structured tasks such as extraction, counting, classification, or narrow return-only transforms. `deep` and `reasoning` are preferred for investigation, planning, tradeoff analysis, and longer contexts. `vision` is used for image turns.
-- `api_key` is optional. If omitted, NullClaw uses the normal credential from `models.providers.<provider>`.
+- `api_key` is optional. If omitted, KrustyKlaw uses the normal credential from `models.providers.<provider>`.
 - `cost_class` is optional metadata with values `free`, `cheap`, `standard`, or `premium`.
 - `quota_class` is optional metadata with values `unlimited`, `normal`, or `constrained`.
 
@@ -267,8 +267,8 @@ Behavior:
 - Relative paths are resolved relative to the directory that contains `config.json`.
 - Absolute paths are used as-is.
 - Both `/` and `\` are accepted in config; the runtime normalizes separators for the current OS.
-- `workspace_path` does not disable `system_prompt`. If both are set, nullclaw keeps the named profile prompt and also loads bootstrap context from that dedicated workspace.
-- On first use, nullclaw scaffolds the workspace if missing and creates:
+- `workspace_path` does not disable `system_prompt`. If both are set, krustyklaw keeps the named profile prompt and also loads bootstrap context from that dedicated workspace.
+- On first use, krustyklaw scaffolds the workspace if missing and creates:
   - `AGENTS.md`
   - `SOUL.md`
   - `IDENTITY.md`
@@ -279,7 +279,7 @@ Isolation model:
 - The agent's file operations, markdown memory files, and workspace-scoped context use that workspace.
 - When `workspace_path` is set, the agent also gets a durable memory namespace of the form `agent:<agent-id>`.
 - That namespace is used by:
-  - `nullclaw agent --agent <id>`
+  - `krustyklaw agent --agent <id>`
   - `/subagents spawn --agent <id> ...`
   - routed sessions that resolve to that named agent through `bindings`
 
@@ -323,7 +323,7 @@ Notes:
 ### `identity` (AIEOS v1.1)
 
 Use this section when you want the runtime identity to come from an AIEOS document.
-When configured, nullclaw injects the parsed AIEOS content into the system prompt alongside workspace identity files such as `AGENTS.md` and `IDENTITY.md`:
+When configured, krustyklaw injects the parsed AIEOS content into the system prompt alongside workspace identity files such as `AGENTS.md` and `IDENTITY.md`:
 
 ```json
 {
@@ -340,7 +340,7 @@ You can also inline the same document directly in config:
 {
   "identity": {
     "format": "aieos",
-    "aieos_inline": "{\"identity\":{\"names\":{\"first\":\"nullclaw-assistant\"},\"bio\":\"General-purpose autonomous assistant\"},\"linguistics\":{\"style\":\"concise\"},\"motivations\":{\"core_drive\":\"Help the operator finish tasks safely\"}}"
+    "aieos_inline": "{\"identity\":{\"names\":{\"first\":\"krustyklaw-assistant\"},\"bio\":\"General-purpose autonomous assistant\"},\"linguistics\":{\"style\":\"concise\"},\"motivations\":{\"core_drive\":\"Help the operator finish tasks safely\"}}"
   }
 }
 ```
@@ -351,7 +351,7 @@ Minimal AIEOS v1.1 example file (`identity/aieos.identity.json`):
 {
   "identity": {
     "names": {
-      "first": "nullclaw-assistant"
+      "first": "krustyklaw-assistant"
     },
     "bio": "General-purpose autonomous assistant"
   },
@@ -387,7 +387,7 @@ External channel plugin example:
         "wa-web": {
           "runtime_name": "whatsapp_web",
           "transport": {
-            "command": "nullclaw-plugin-whatsapp-web",
+            "command": "krustyklaw-plugin-whatsapp-web",
             "args": ["--stdio"],
             "timeout_ms": 10000,
             "env": {
@@ -410,9 +410,9 @@ External channel notes:
 For the full protocol, lifecycle, metadata conventions, and plugin author
 contract, see [External Channel Plugins](./external-channels.md).
 
-- `runtime_name` is the nullclaw runtime channel id used by routing, bindings, session keys, and outbound dispatch. It must not reuse a built-in channel name or any runtime name already claimed by another configured channel.
+- `runtime_name` is the krustyklaw runtime channel id used by routing, bindings, session keys, and outbound dispatch. It must not reuse a built-in channel name or any runtime name already claimed by another configured channel.
 - `transport.command` plus optional `transport.args` starts the plugin as a child process over line-delimited JSON-RPC on stdio.
-- `transport.timeout_ms` bounds host->plugin RPC waits; nullclaw still caps control-plane waits internally so one broken plugin cannot stall supervision for minutes.
+- `transport.timeout_ms` bounds host->plugin RPC waits; krustyklaw still caps control-plane waits internally so one broken plugin cannot stall supervision for minutes.
 - `transport.env` is forwarded only to the plugin process.
 - `config` must be a JSON object; it is forwarded to the plugin `start` request as `params.config`.
 - Plugins must answer `get_manifest`, handle `start`/`send`/`stop`; `health` is recommended so supervision can detect disconnected sidecars instead of only live processes.
@@ -421,18 +421,18 @@ contract, see [External Channel Plugins](./external-channels.md).
 - `start.params` now has a nested `runtime` object with `name`, `account_id`, and host-owned `state_dir`.
 - `start.result` must contain `started: true`; `send`, `send_rich`, `edit_message`, `delete_message`, and typing/message-action RPCs must return `result.accepted: true` when the plugin actually accepts the action. A JSON-RPC success envelope by itself is not enough.
 - `send.params` now has nested `runtime` and `message` objects; text payloads use `message.text`.
-- If a plugin declares both `capabilities.edit=true` and `capabilities.delete=true`, `send.result` may also include `message_id` or `message { target?, message_id }`; that lets nullclaw keep a tracked draft updated on channels that do not support native `.chunk` streaming.
-- If `capabilities.streaming=true`, nullclaw may emit `.chunk` staged `send` events during model streaming. If it is absent or `false`, nullclaw will only emit final responses.
+- If a plugin declares both `capabilities.edit=true` and `capabilities.delete=true`, `send.result` may also include `message_id` or `message { target?, message_id }`; that lets krustyklaw keep a tracked draft updated on channels that do not support native `.chunk` streaming.
+- If `capabilities.streaming=true`, krustyklaw may emit `.chunk` staged `send` events during model streaming. If it is absent or `false`, krustyklaw will only emit final responses.
 - If `capabilities.send_rich=true`, the host may call `send_rich` with nested `runtime` and `message { target, text, attachments, choices }`.
 - If `capabilities.typing=true`, the host may call `start_typing` / `stop_typing` with nested `runtime` plus `recipient`.
 - If `capabilities.edit=true` / `capabilities.delete=true`, the host may call `edit_message` / `delete_message`.
 - If `capabilities.reactions=true` or `capabilities.read_receipts=true`, the host may call `set_reaction` and `mark_read`.
 - `inbound_message.params.message` must include `sender_id`, `chat_id`, and `text`; if `metadata` is present it must be a JSON object, and if `media` is present it must be an array of non-empty strings.
 - Include `metadata.peer_kind` plus `metadata.peer_id` when you want routing/bindings to distinguish direct vs group peers for unknown channels.
-- Unknown/external channels can also set `metadata.is_group`, `metadata.is_dm`, or `metadata.typing_recipient`; nullclaw promotes that metadata into prompt conversation context and processing-indicator routing.
-- A reference bridge adapter for the PR #265 WhatsApp Web sidecar lives in `examples/whatsapp-web/nullclaw-plugin-whatsapp-web`.
-- Production companion repositories now live out of tree: [nullclaw/nullclaw-channel-baileys](https://github.com/nullclaw/nullclaw-channel-baileys) and [nullclaw/nullclaw-channel-whatsmeow-bridge](https://github.com/nullclaw/nullclaw-channel-whatsmeow-bridge).
-- `nullclaw channel start external` starts the first configured external account; `nullclaw channel start <runtime_name>` targets a specific configured runtime name such as `whatsapp_web`.
+- Unknown/external channels can also set `metadata.is_group`, `metadata.is_dm`, or `metadata.typing_recipient`; krustyklaw promotes that metadata into prompt conversation context and processing-indicator routing.
+- A reference bridge adapter for the PR #265 WhatsApp Web sidecar lives in `examples/whatsapp-web/krustyklaw-plugin-whatsapp-web`.
+- Production companion repositories now live out of tree: [krustyklaw/krustyklaw-channel-baileys](https://github.com/krustyklaw/krustyklaw-channel-baileys) and [krustyklaw/krustyklaw-channel-whatsmeow-bridge](https://github.com/krustyklaw/krustyklaw-channel-whatsmeow-bridge).
+- `krustyklaw channel start external` starts the first configured external account; `krustyklaw channel start <runtime_name>` targets a specific configured runtime name such as `whatsapp_web`.
 
 Telegram example:
 
@@ -494,7 +494,7 @@ Example:
 
 In that setup, topic `42` routes to `coder`, while the rest of the forum falls back to `orchestrator`.
 
-> **Peer ID format note**: Topic peer IDs in `bindings` must use the canonical `:thread:N` format (e.g. `"-1001234567890:thread:42"`). The legacy `#topic:N` format (e.g. `"-1001234567890#topic:42"`) is auto-converted at load time but is **deprecated** — a warning will appear in the logs. If you see `#topic:` in nullclaw's log output, convert it to `:thread:` when copying into your config. The `/bind` command always saves in the correct format automatically.
+> **Peer ID format note**: Topic peer IDs in `bindings` must use the canonical `:thread:N` format (e.g. `"-1001234567890:thread:42"`). The legacy `#topic:N` format (e.g. `"-1001234567890#topic:42"`) is auto-converted at load time but is **deprecated** — a warning will appear in the logs. If you see `#topic:` in krustyklaw's log output, convert it to `:thread:` when copying into your config. The `/bind` command always saves in the correct format automatically.
 
 Named agent profiles and bindings are separate concerns: `agents.list` defines reusable profiles, while `bindings` decides which profile is used for a given chat/topic.
 
@@ -547,9 +547,9 @@ Minimal end-to-end example:
 Operator flow:
 
 - Send `/bind coder` inside the target forum topic.
-- `nullclaw` writes a new exact `bindings[]` entry to `~/.nullclaw/config.json` for that topic and Telegram account.
+- `krustyklaw` writes a new exact `bindings[]` entry to `~/.krustyklaw/config.json` for that topic and Telegram account.
 - The next message in that topic uses the new routed agent profile.
-- `nullclaw` must have write access to `~/.nullclaw/config.json` for `/bind` to persist changes.
+- `krustyklaw` must have write access to `~/.krustyklaw/config.json` for `/bind` to persist changes.
 
 About `account_id`:
 
@@ -557,7 +557,7 @@ About `account_id`:
 - In the standard `channels.telegram.accounts` layout, the object key becomes the account id. For example, `accounts.main` means `account_id = "main"`.
 - In `bindings`, `match.account_id` restricts a binding to one specific Telegram account.
 - If `match.account_id` is omitted, the binding can match any Telegram account for that channel.
-- Different account ids are only useful when the same nullclaw instance runs multiple Telegram bot accounts/tokens.
+- Different account ids are only useful when the same krustyklaw instance runs multiple Telegram bot accounts/tokens.
 
 ### Web UI / Browser Relay
 
@@ -669,7 +669,7 @@ Max notes:
 - For multi-account webhook setups, give each account either a unique `webhook_secret` or a unique `account_id` query in the webhook URL, for example `/max?account_id=main`.
 - `allow_from` and `group_allow_from` accept either Max `user_id` values or usernames. `user_id` is the stable choice for bindings and routing.
 - `require_mention = true` only affects group chats. Direct messages and `bot_started` deep links still work normally.
-- Max inline buttons are one-shot in nullclaw: after a valid click, the original keyboard is cleared to avoid stale buttons.
+- Max inline buttons are one-shot in krustyklaw: after a valid click, the original keyboard is cleared to avoid stale buttons.
 
 ### Discord
 
@@ -772,20 +772,20 @@ Parameters:
 - `require_mention` (default: false) - Require bot mention in guilds to respond
 - `guild_id` (optional) - Reserved for Discord server scoping; current runtime does not enforce it
 
-NullClaw splits messages >2000 characters (Discord API limit).
+KrustyKlaw splits messages >2000 characters (Discord API limit).
 
 Verification:
 ```bash
-nullclaw channel start discord
-nullclaw channel status
+krustyklaw channel start discord
+krustyklaw channel status
 ```
 
-`nullclaw channel start discord` starts only the first configured Discord account. For multi-account validation, run `nullclaw gateway` and send a test message to each configured bot.
+`krustyklaw channel start discord` starts only the first configured Discord account. For multi-account validation, run `krustyklaw gateway` and send a test message to each configured bot.
 
 Common issues:
 - Bot only responds in DMs or explicit mentions: enable MESSAGE CONTENT INTENT, then re-invite the bot if needed
 - "Privileged Intents" error: enable MESSAGE CONTENT INTENT in Discord Developer Portal; verified apps may also need Discord approval
-- Bot offline: Check `nullclaw service status`, verify token hasn't been reset
+- Bot offline: Check `krustyklaw service status`, verify token hasn't been reset
 - No response in guilds: Check `require_mention` setting, verify Read Messages permission
 
 ### `memory`
@@ -904,20 +904,20 @@ Notes:
 After each config change:
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
+krustyklaw doctor
+krustyklaw status
+krustyklaw channel status
 ```
 
 If gateway/channel changed, also run:
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 ```
 
 ## Next Steps
 
-- Run `nullclaw doctor` and `nullclaw status` after each edit to confirm the config still loads cleanly
+- Run `krustyklaw doctor` and `krustyklaw status` after each edit to confirm the config still loads cleanly
 - Use [Usage and Operations](./usage.md) for operational checks, service mode, and troubleshooting flow
 - Review [Security](./security.md) before enabling broader autonomy, public bind, or wildcard allowlists
 

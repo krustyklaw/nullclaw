@@ -9,7 +9,7 @@ const ChatMessage = root.ChatMessage;
 
 /// Provider that delegates to the `claude` CLI (Claude Code).
 ///
-/// Fresh sessions seed Claude with the full NullClaw transcript, while resumed
+/// Fresh sessions seed Claude with the full KrustyKlaw transcript, while resumed
 /// sessions send only the new message delta since the last successful turn.
 pub const ClaudeCliProvider = struct {
     allocator: std.mem.Allocator,

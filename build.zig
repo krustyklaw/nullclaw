@@ -361,7 +361,7 @@ fn ensureAndroidBuildEnvironment(b: *std.Build) void {
         std.log.err("Install the Android NDK, generate a libc/sysroot file for the target, and pass it with --libc.", .{});
     }
     std.log.err("For native builds, run the build inside Termux without -Dtarget.", .{});
-    std.log.err("If you are seeing a build.zig.zon parse error mentioning '.nullclaw', your Zig version is not 0.15.2.", .{});
+    std.log.err("If you are seeing a build.zig.zon parse error mentioning '.krustyklaw', your Zig version is not 0.15.2.", .{});
     std.process.exit(1);
 }
 
@@ -379,7 +379,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const is_wasi = target.result.os.tag == .wasi;
     const is_static = b.option(bool, "static", "Static build") orelse false;
-    const enable_embedded_wasm3 = b.option(bool, "embedded_wasm3", "Embed wasm3 runtime into nullclaw binary (default: true; use -Dembedded_wasm3=false to disable)") orelse true;
+    const enable_embedded_wasm3 = b.option(bool, "embedded_wasm3", "Embed wasm3 runtime into krustyklaw binary (default: true; use -Dembedded_wasm3=false to disable)") orelse true;
     const app_version = b.option([]const u8, "version", "Version string embedded in the binary") orelse "dev";
     const channels_raw = b.option(
         []const u8,
@@ -506,7 +506,7 @@ pub fn build(b: *std.Build) void {
 
     // ---------- library module (importable by consumers) ----------
     const lib_mod: ?*std.Build.Module = if (is_wasi) null else blk: {
-        const module = b.addModule("nullclaw", .{
+        const module = b.addModule("krustyklaw", .{
             .root_source_file = b.path("src/root.zig"),
             .target = target,
             .optimize = optimize,
@@ -535,7 +535,7 @@ pub fn build(b: *std.Build) void {
     const exe_imports: []const std.Build.Module.Import = if (is_wasi)
         &.{}
     else
-        &.{.{ .name = "nullclaw", .module = lib_mod.? }};
+        &.{.{ .name = "krustyklaw", .module = lib_mod.? }};
 
     const exe_root_module = b.createModule(.{
         .root_source_file = if (is_wasi) b.path("src/main_wasi.zig") else b.path("src/main.zig"),
@@ -545,13 +545,13 @@ pub fn build(b: *std.Build) void {
     });
     const exe = if (is_static)
         b.addExecutable(.{
-            .name = "nullclaw",
+            .name = "krustyklaw",
             .root_module = exe_root_module,
             .linkage = .static,
         })
     else
         b.addExecutable(.{
-            .name = "nullclaw",
+            .name = "krustyklaw",
             .root_module = exe_root_module,
         });
     exe.root_module.addImport("build_options", build_options_module);
@@ -586,7 +586,7 @@ pub fn build(b: *std.Build) void {
     }
 
     // ---------- run step ----------
-    const run_step = b.step("run", "Run nullclaw");
+    const run_step = b.step("run", "Run krustyklaw");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());

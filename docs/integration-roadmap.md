@@ -1,4 +1,4 @@
-# Integration Roadmap: nullclaw + nullboiler + nulltickets
+# Integration Roadmap: krustyklaw + nullboiler + nulltickets
 
 > Target: End-to-end multi-agent workflows with Telegram topic routing
 
@@ -32,22 +32,22 @@
 
 ## Phase 1: Critical Path (Week 1)
 
-**Goal:** Enable nullboiler → nullclaw communication
+**Goal:** Enable nullboiler → krustyklaw communication
 
 - [ ] **Gap 3:** Worker Endpoint
-  - File: `nullclaw/src/gateway.zig`
+  - File: `krustyklaw/src/gateway.zig`
   - Accept nullboiler step dispatch format
   - Route to agent via session manager
   - Return synchronous response
 
 - [ ] **Gap 1:** External Message Send API
-  - File: `nullclaw/src/gateway.zig`
+  - File: `krustyklaw/src/gateway.zig`
   - Accept authenticated requests
   - Hook into outbound bus
   - Support topic format `chatid#topic:threadid`
 
 - [ ] **Gap 2:** Callback Receiver
-  - File: `nullclaw/src/gateway.zig`
+  - File: `krustyklaw/src/gateway.zig`
   - Parse nullboiler callback format
   - Route to appropriate handler
 
@@ -103,7 +103,7 @@
 
 ### Key Files
 
-**nullclaw:**
+**krustyklaw:**
 - `src/gateway.zig` — Add 3 new endpoints
 - `src/config.zig` — Add nullboiler config
 - `src/daemon.zig` — Startup registration
@@ -116,12 +116,12 @@
 ### Testing Strategy
 
 1. Unit tests for each new endpoint
-2. Integration test: nullboiler dispatch → nullclaw worker → Telegram delivery
+2. Integration test: nullboiler dispatch → krustyklaw worker → Telegram delivery
 3. End-to-end: User message → orchestrator → workflow → coder → result in topic
 
 ### Dependencies
 
-- nullclaw must be running with gateway enabled
+- krustyklaw must be running with gateway enabled
 - nullboiler must be accessible via HTTP
 - Telegram bot must have access to target topics
 
@@ -130,8 +130,8 @@
 ## References
 
 - Full analysis: `./integration-analysis.md`
-- nullboiler repo: `https://github.com/nullclaw/nullboiler`
-- nulltickets repo: `https://github.com/nullclaw/nulltickets`
+- nullboiler repo: `https://github.com/krustyklaw/nullboiler`
+- nulltickets repo: `https://github.com/krustyklaw/nulltickets`
 
 ---
 

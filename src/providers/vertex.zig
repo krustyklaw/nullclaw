@@ -528,7 +528,7 @@ fn signRsaSha256WithOpenSsl(
     const temp_dir = try platform.getTempDir(allocator);
     defer allocator.free(temp_dir);
 
-    const filename = try std.fmt.allocPrint(allocator, "nullclaw-vertex-sa-{x}.pem", .{std.crypto.random.int(u64)});
+    const filename = try std.fmt.allocPrint(allocator, "krustyklaw-vertex-sa-{x}.pem", .{std.crypto.random.int(u64)});
     defer allocator.free(filename);
 
     const key_path = try std.fs.path.join(allocator, &.{ temp_dir, filename });

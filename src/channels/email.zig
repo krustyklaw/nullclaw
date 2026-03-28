@@ -93,7 +93,7 @@ pub const EmailChannel = struct {
         if (!self.config.consent_granted) return error.ConsentNotGranted;
 
         // Extract subject if present
-        var subject: []const u8 = "nullclaw Message";
+        var subject: []const u8 = "krustyklaw Message";
         var body = message;
         if (std.mem.startsWith(u8, message, "Subject: ")) {
             if (std.mem.indexOf(u8, message, "\n")) |nl_pos| {
@@ -114,7 +114,7 @@ pub const EmailChannel = struct {
         // EHLO
         var ehlo_buf: [256]u8 = undefined;
         var ehlo_fbs = std.io.fixedBufferStream(&ehlo_buf);
-        try ehlo_fbs.writer().print("EHLO nullclaw\r\n", .{});
+        try ehlo_fbs.writer().print("EHLO krustyklaw\r\n", .{});
         try stream.writeAll(ehlo_fbs.getWritten());
         _ = stream.read(&greeting_buf) catch return error.SmtpError;
 

@@ -111,7 +111,7 @@ pub const DiagnosticsConfig = struct {
     otel_service_name: ?[]const u8 = null,
     otel_headers: []const OtelHeaderEntry = &.{},
     /// Optional max length for user-visible provider/API errors after scrubbing.
-    /// If null, uses env var NULLCLAW_MAX_ERROR_CHARS (or built-in default).
+    /// If null, uses env var KRUSTYKLAW_MAX_ERROR_CHARS (or built-in default).
     api_error_max_chars: ?u32 = null,
     /// Emit info logs for every executed tool call (name/id/duration/success).
     /// Arguments and tool output are never logged.
@@ -651,7 +651,7 @@ pub const WebConfig = struct {
     pub const MAX_RELAY_TOKEN_TTL_SECS: u32 = 31_536_000; // 365 days
 
     account_id: []const u8 = "default",
-    /// "local" starts an inbound WS listener in nullclaw.
+    /// "local" starts an inbound WS listener in krustyklaw.
     /// "relay" keeps a single outbound WS connection to a relay service.
     transport: []const u8 = DEFAULT_TRANSPORT,
     port: u16 = 32123,
@@ -663,7 +663,7 @@ pub const WebConfig = struct {
     max_handshake_size: u16 = DEFAULT_MAX_HANDSHAKE_SIZE,
     /// Optional WebSocket-upgrade auth token for browser/extension clients.
     /// Used for WebSocket-upgrade hardening and for `message_auth_mode="token"`.
-    /// If null, WebChannel falls back to env (NULLCLAW_WEB_TOKEN/NULLCLAW_GATEWAY_TOKEN/OPENCLAW_GATEWAY_TOKEN),
+    /// If null, WebChannel falls back to env (KRUSTYKLAW_WEB_TOKEN/KRUSTYKLAW_GATEWAY_TOKEN/OPENCLAW_GATEWAY_TOKEN),
     /// then to an ephemeral runtime token.
     auth_token: ?[]const u8 = null,
     /// Authentication mode for inbound user_message events.
@@ -678,7 +678,7 @@ pub const WebConfig = struct {
     /// Stable logical agent identity on relay side.
     relay_agent_id: []const u8 = "default",
     /// Optional dedicated relay auth token.
-    /// If omitted, relay lifecycle resolves token from NULLCLAW_RELAY_TOKEN,
+    /// If omitted, relay lifecycle resolves token from KRUSTYKLAW_RELAY_TOKEN,
     /// then persisted `web-relay-<account_id>` credential, then generates one.
     relay_token: ?[]const u8 = null,
     /// Expiry for persisted relay token lifecycle (seconds).
@@ -822,7 +822,7 @@ pub const NostrConfig = struct {
     /// Owner is always implicitly allowed regardless of this list.
     dm_allowed_pubkeys: []const []const u8 = &.{},
     /// Display name for kind:0 metadata.
-    display_name: []const u8 = "NullClaw",
+    display_name: []const u8 = "KrustyKlaw",
     /// About text for kind:0 metadata.
     about: []const u8 = "AI assistant",
     /// Path to profile picture file. Published in kind:0 metadata as "picture" field.
@@ -855,7 +855,7 @@ pub const ExternalChannelConfig = struct {
     };
 
     account_id: []const u8 = "default",
-    /// Runtime channel identifier exposed inside nullclaw routing and bindings.
+    /// Runtime channel identifier exposed inside krustyklaw routing and bindings.
     /// Example: "whatsapp_web"
     runtime_name: []const u8 = "",
     /// Plugin process transport configuration (JSON-RPC over stdio).
@@ -1157,7 +1157,7 @@ pub const MemoryVectorStoreConfig = struct {
     sidecar_path: []const u8 = "",
     qdrant_url: []const u8 = "",
     qdrant_api_key: []const u8 = "",
-    qdrant_collection: []const u8 = "nullclaw_memories",
+    qdrant_collection: []const u8 = "krustyklaw_memories",
     pgvector_table: []const u8 = "memory_embeddings",
     // sqlite_ann (experimental): candidate prefilter tuning.
     ann_candidate_multiplier: u32 = 12,
@@ -1250,7 +1250,7 @@ pub const MemoryRedisConfig = struct {
     port: u16 = 6379,
     password: []const u8 = "",
     db_index: u8 = 0,
-    key_prefix: []const u8 = "nullclaw",
+    key_prefix: []const u8 = "krustyklaw",
     ttl_seconds: u32 = 0, // 0 = no expiry
 };
 
@@ -1316,7 +1316,7 @@ pub const GatewayConfig = struct {
 
 pub const A2aConfig = struct {
     enabled: bool = false,
-    name: []const u8 = "NullClaw",
+    name: []const u8 = "KrustyKlaw",
     description: []const u8 = "AI assistant",
     url: []const u8 = "",
     version: []const u8 = "1.0.0",
@@ -1460,7 +1460,7 @@ pub const HttpRequestConfig = struct {
 // ── Identity config ─────────────────────────────────────────────
 
 pub const IdentityConfig = struct {
-    format: []const u8 = "nullclaw",
+    format: []const u8 = "krustyklaw",
     aieos_path: ?[]const u8 = null,
     aieos_inline: ?[]const u8 = null,
 };
@@ -1822,12 +1822,12 @@ test "WebConfig token validation enforces printable no-whitespace constraints" {
 test "WebConfig origin validation accepts wildcard and absolute origins" {
     try std.testing.expect(WebConfig.isValidAllowedOrigin("*"));
     try std.testing.expect(WebConfig.isValidAllowedOrigin("null"));
-    try std.testing.expect(WebConfig.isValidAllowedOrigin("https://relay.nullclaw.io"));
-    try std.testing.expect(WebConfig.isValidAllowedOrigin("https://relay.nullclaw.io/"));
+    try std.testing.expect(WebConfig.isValidAllowedOrigin("https://relay.krustyklaw.io"));
+    try std.testing.expect(WebConfig.isValidAllowedOrigin("https://relay.krustyklaw.io/"));
     try std.testing.expect(WebConfig.isValidAllowedOrigin("chrome-extension://abcdefghijklmnop"));
     try std.testing.expect(!WebConfig.isValidAllowedOrigin(""));
-    try std.testing.expect(!WebConfig.isValidAllowedOrigin("relay.nullclaw.io"));
-    try std.testing.expect(!WebConfig.isValidAllowedOrigin("https://relay.nullclaw.io/path"));
+    try std.testing.expect(!WebConfig.isValidAllowedOrigin("relay.krustyklaw.io"));
+    try std.testing.expect(!WebConfig.isValidAllowedOrigin("https://relay.krustyklaw.io/path"));
 }
 
 test "WebConfig transport validation supports local and relay" {
@@ -1847,13 +1847,13 @@ test "WebConfig message auth mode validation supports pairing and token" {
 }
 
 test "WebConfig relay URL validation requires wss authority" {
-    try std.testing.expect(WebConfig.isValidRelayUrl("wss://relay.nullclaw.io/ws"));
-    try std.testing.expect(WebConfig.isValidRelayUrl("wss://relay.nullclaw.io"));
-    try std.testing.expect(!WebConfig.isValidRelayUrl("ws://relay.nullclaw.io/ws"));
-    try std.testing.expect(!WebConfig.isValidRelayUrl("https://relay.nullclaw.io/ws"));
+    try std.testing.expect(WebConfig.isValidRelayUrl("wss://relay.krustyklaw.io/ws"));
+    try std.testing.expect(WebConfig.isValidRelayUrl("wss://relay.krustyklaw.io"));
+    try std.testing.expect(!WebConfig.isValidRelayUrl("ws://relay.krustyklaw.io/ws"));
+    try std.testing.expect(!WebConfig.isValidRelayUrl("https://relay.krustyklaw.io/ws"));
     try std.testing.expect(!WebConfig.isValidRelayUrl("wss://"));
-    try std.testing.expect(!WebConfig.isValidRelayUrl("wss://relay.nullclaw.io?x=1"));
-    try std.testing.expect(!WebConfig.isValidRelayUrl("wss://relay.nullclaw.io/ws#frag"));
+    try std.testing.expect(!WebConfig.isValidRelayUrl("wss://relay.krustyklaw.io?x=1"));
+    try std.testing.expect(!WebConfig.isValidRelayUrl("wss://relay.krustyklaw.io/ws#frag"));
 }
 
 test "WebConfig relay agent id validation enforces non-empty id" {

@@ -4,7 +4,7 @@
 
 ## 页面导航
 
-- 这页适合谁：刚准备安装 NullClaw，或者要确认本机环境、容器部署、升级与卸载路径的人。
+- 这页适合谁：刚准备安装 KrustyKlaw，或者要确认本机环境、容器部署、升级与卸载路径的人。
 - 看完去哪里：安装完成后先看 [配置指南](./configuration.md)；想直接跑一遍常用命令看 [使用与运维](./usage.md)；想先浏览 CLI 入口看 [命令参考](./commands.md)。
 - 如果你是从某页来的：从 [README](./README.md) 来，这页就是落地安装的第一站；从 [命令参考](./commands.md) 来，适合回头补齐本机安装与 PATH；从 [开发指南](./development.md) 来，可把本页当作本地环境准备清单。
 
@@ -25,29 +25,29 @@ zig version
 ### Homebrew（macOS/Linux推荐）
 
 ```bash
-brew install nullclaw
-nullclaw --help
+brew install krustyklaw
+krustyklaw --help
 ```
 如果命令可用，说明安装成功。
 
 ### 命令行（CMD）(Windows)
 
-直接将下载的nullclaw二进制文件（.exe)在命令行中作为命令执行即可，
+直接将下载的krustyklaw二进制文件（.exe)在命令行中作为命令执行即可，
 
-比如检查nullclaw版本号的命令如下：
+比如检查krustyklaw版本号的命令如下：
 
 ```cmd
-x:\path\nullclaw-xxx version
+x:\path\krustyklaw-xxx version
 ```
 
 ## 方式二：官方容器镜像（Docker / Podman）
 
-NullClaw 当前提供官方 OCI 镜像：`ghcr.io/nullclaw/nullclaw`。
+KrustyKlaw 当前提供官方 OCI 镜像：`ghcr.io/krustyklaw/krustyklaw`。
 
-容器内的持久化目录统一放在 `/nullclaw-data`：
+容器内的持久化目录统一放在 `/krustyklaw-data`：
 
-- 配置文件：`/nullclaw-data/config.json`
-- 工作区：`/nullclaw-data/workspace`
+- 配置文件：`/krustyklaw-data/config.json`
+- 工作区：`/krustyklaw-data/workspace`
 
 镜像内自带的初始配置已经使用当前配置结构（`agents.defaults.model.primary` 和 `models.providers`），因此在你填入 provider 凭证之前，`latest` 也应能正常启动。
 
@@ -55,24 +55,24 @@ NullClaw 当前提供官方 OCI 镜像：`ghcr.io/nullclaw/nullclaw`。
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest status
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest status
 ```
 
 交互式初始化配置：
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest onboard --interactive
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest onboard --interactive
 ```
 
 运行交互式 agent：
 
 ```bash
 docker run --rm -it \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest agent
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest agent
 ```
 
 运行 HTTP gateway：
@@ -80,8 +80,8 @@ docker run --rm -it \
 ```bash
 docker run --rm -it \
   -p 127.0.0.1:3000:3000 \
-  -v nullclaw-data:/nullclaw-data \
-  ghcr.io/nullclaw/nullclaw:latest
+  -v krustyklaw-data:/krustyklaw-data \
+  ghcr.io/krustyklaw/krustyklaw:latest
 ```
 
 ### Docker Compose
@@ -113,24 +113,24 @@ Profile 含义：
 
 如果你需要局域网或公网访问，请显式修改发布地址，并先阅读 [安全指南](./security.md)。
 
-如果你要固定版本标签，或者以后切换到其他镜像仓库，可以覆盖 `NULLCLAW_IMAGE`：
+如果你要固定版本标签，或者以后切换到其他镜像仓库，可以覆盖 `KRUSTYKLAW_IMAGE`：
 
 ```bash
-NULLCLAW_IMAGE=ghcr.io/nullclaw/nullclaw:v2026.3.11 docker compose --profile gateway up -d gateway
+KRUSTYKLAW_IMAGE=ghcr.io/krustyklaw/krustyklaw:v2026.3.11 docker compose --profile gateway up -d gateway
 ```
 
 ## 方式三：源码构建（通用）
 
 ```bash
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig build -Doptimize=ReleaseSmall
 zig build test --summary all
 ```
 
 构建产物：
 
-- `zig-out/bin/nullclaw`
+- `zig-out/bin/krustyklaw`
 
 ## 方式四：Android / Termux
 
@@ -145,11 +145,11 @@ zig build test --summary all
 ```bash
 pkg update
 pkg install git zig
-git clone https://github.com/nullclaw/nullclaw.git
-cd nullclaw
+git clone https://github.com/krustyklaw/krustyklaw.git
+cd krustyklaw
 zig version
 zig build -Doptimize=ReleaseSmall
-./zig-out/bin/nullclaw --help
+./zig-out/bin/krustyklaw --help
 ```
 
 说明：
@@ -204,20 +204,20 @@ $env:Path = "$env:Path;$bin"
 ```
 
 ### 直接使用下载的二进制文件（Windows,Powershell)
-可将下载的nullclaw二进制文件（.exe)改名为nullclaw.exe，再以管理员权限在Powershell中执行如下命令，将该文件所在的路径加入到windows系统变量PATH中：
+可将下载的krustyklaw二进制文件（.exe)改名为krustyklaw.exe，再以管理员权限在Powershell中执行如下命令，将该文件所在的路径加入到windows系统变量PATH中：
 
 ```Powershell 
 $old = [Environment]::GetEnvironmentVariable("Path", "Machine")
-$new = "$old;x:\nullclaw二进制文件所在目录"
+$new = "$old;x:\krustyklaw二进制文件所在目录"
 [Environment]::SetEnvironmentVariable("Path", $new, "Machine")
 ```
 
 ## 安装验证
 
 ```bash
-nullclaw --help
-nullclaw --version
-nullclaw status
+krustyklaw --help
+krustyklaw --version
+krustyklaw status
 ```
 
 若 `status` 能正常输出组件状态，说明安装与运行环境基本可用。
@@ -230,19 +230,19 @@ nullclaw status
 
 ```bash
 brew update
-brew upgrade nullclaw
-brew uninstall nullclaw
+brew upgrade krustyklaw
+brew uninstall krustyklaw
 ```
 #### 命令行（CMD)（Windows）
 
-- 升级： `nullclaw update`
-- 卸载：直接删除nullclaw二进制文件。
-检查系统变量PATH，若存在就将nullclaw二进制文件的所在目录从中删除。
+- 升级： `krustyklaw update`
+- 卸载：直接删除krustyklaw二进制文件。
+检查系统变量PATH，若存在就将krustyklaw二进制文件的所在目录从中删除。
 
 ### 源码安装
 
 - 升级：`git pull` 后重新执行 `zig build -Doptimize=ReleaseSmall`
-- 卸载：删除安装位置中的 `nullclaw` 二进制，并移除 PATH 配置行
+- 卸载：删除安装位置中的 `krustyklaw` 二进制，并移除 PATH 配置行
 
 ## 下一步
 

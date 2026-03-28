@@ -2701,7 +2701,7 @@ test "supportsStreaming returns false when disable_streaming enabled" {
 }
 
 test "validateUserAgent rejects CRLF injection" {
-    try std.testing.expect(OpenAiCompatibleProvider.validateUserAgent("nullclaw/1.0"));
+    try std.testing.expect(OpenAiCompatibleProvider.validateUserAgent("krustyklaw/1.0"));
     try std.testing.expect(!OpenAiCompatibleProvider.validateUserAgent("bad\r\nX-Test: 1"));
 }
 

@@ -2,7 +2,7 @@
 //!
 //! Stores last active channel/chat so heartbeat, cron, and other
 //! components know where to route messages.
-//! Persisted to `~/.nullclaw/state.json` with atomic writes (temp + rename).
+//! Persisted to `~/.krustyklaw/state.json` with atomic writes (temp + rename).
 
 const std = @import("std");
 const json_util = @import("json_util.zig");
@@ -361,7 +361,7 @@ test "StateManager concurrent setLastChannel" {
 }
 
 test "defaultStatePath" {
-    const path = try defaultStatePath(testing.allocator, "/home/user/.nullclaw");
+    const path = try defaultStatePath(testing.allocator, "/home/user/.krustyklaw");
     defer testing.allocator.free(path);
-    try testing.expectEqualStrings("/home/user/.nullclaw/state.json", path);
+    try testing.expectEqualStrings("/home/user/.krustyklaw/state.json", path);
 }

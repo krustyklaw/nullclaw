@@ -27,15 +27,15 @@ const AI_INTERACTION_UPDATE_URL = "https://api.dingtalk.com/v1.0/aiInteraction/u
 const AI_INTERACTION_FINISH_URL = "https://api.dingtalk.com/v1.0/aiInteraction/finish";
 const CALLBACK_TOPIC = "/v1.0/im/bot/messages/get";
 const SYSTEM_TOPIC_DISCONNECT = "disconnect";
-const USER_AGENT = "nullclaw-dingtalk/0.1.0";
+const USER_AGENT = "krustyklaw-dingtalk/0.1.0";
 const TOKEN_REFRESH_MARGIN_SECS: i64 = 300;
 const RECONNECT_DELAY_NS: u64 = 5 * std.time.ns_per_s;
-const ATTACHMENT_CACHE_SUBDIR = "nullclaw_dingtalk_media";
+const ATTACHMENT_CACHE_SUBDIR = "krustyklaw_dingtalk_media";
 const ATTACHMENT_MAX_BYTES: usize = 20 * 1024 * 1024;
 const REPLY_TARGET_CAPACITY: usize = 4096;
 const BASIC_CARD_SCHEMA_CONTENT_TYPE = "basic_card_schema";
 const AI_CARD_CONTENT_TYPE = "ai_card";
-const BASIC_CARD_SCHEMA_TITLE = "nullclaw";
+const BASIC_CARD_SCHEMA_TITLE = "krustyklaw";
 const BASIC_CARD_SCHEMA_LOGO = "@lALPDfJ6V_FPDmvNAfTNAfQ";
 const STREAMING_COMPONENT_TAG = "streamingComponent";
 
@@ -748,7 +748,7 @@ pub const DingTalkChannel = struct {
             try text_writer.print("{s}\n\n", .{section.body});
         }
         const body_text = text_fbs.getWritten();
-        const title = if (payload.card_title.len > 0) payload.card_title else "NullClaw";
+        const title = if (payload.card_title.len > 0) payload.card_title else "KrustyKlaw";
 
         var json_fbs = std.io.fixedBufferStream(buf);
         const writer = json_fbs.writer();

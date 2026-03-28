@@ -154,7 +154,7 @@ pub const GeminiCliProvider = struct {
         // NOTE: "yolo" mode is used here to allow the gemini-cli agent to perform
         // its internal tool calls (like reading workspace context) without
         // interactive approval, which is required for non-interactive ACP sessions.
-        // Higher-level security is enforced by nullclaw's own tool approval logic.
+        // Higher-level security is enforced by krustyklaw's own tool approval logic.
         try argv_list.append(self.allocator, try self.allocator.dupe(u8, "yolo"));
         self.child_argv = try argv_list.toOwnedSlice(self.allocator);
         

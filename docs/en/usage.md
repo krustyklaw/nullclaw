@@ -6,7 +6,7 @@ This page focuses on day-to-day commands, service mode, and troubleshooting.
 
 **Who this page is for**
 
-- Users running NullClaw day to day from the CLI or service mode
+- Users running KrustyKlaw day to day from the CLI or service mode
 - Operators checking health, restarts, and post-change validation steps
 - Troubleshooters narrowing down common startup, model, channel, or gateway issues
 
@@ -27,44 +27,44 @@ This page focuses on day-to-day commands, service mode, and troubleshooting.
 1. Initialize:
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 2. Send a test message:
 
 ```bash
-nullclaw agent -m "hello nullclaw"
+krustyklaw agent -m "hello krustyklaw"
 ```
 
 3. Start long-running gateway:
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 ```
 
 ## Command Quick Reference
 
 | Command | Purpose |
 |---|---|
-| `nullclaw onboard --api-key sk-... --provider openrouter` | Quick setup for provider and API key |
-| `nullclaw onboard --interactive` | Full interactive setup |
-| `nullclaw onboard --channels-only` | Reconfigure channels and allowlists only |
-| `nullclaw agent -m "..."` | Single-message mode |
-| `nullclaw agent` | Interactive mode |
-| `nullclaw gateway` | Start long-running runtime (default `127.0.0.1:3000`) |
-| `nullclaw service install` | Install background service |
-| `nullclaw service start` | Start background service |
-| `nullclaw service status` | Check service status |
-| `nullclaw service stop` | Stop background service |
-| `nullclaw service uninstall` | Uninstall background service |
-| `nullclaw doctor` | Run diagnostics |
-| `nullclaw status` | Show global status |
-| `nullclaw channel status` | Show channel health |
-| `nullclaw channel start telegram` | Start a specific channel |
-| `nullclaw migrate openclaw --dry-run` | Dry-run OpenClaw migration |
-| `nullclaw migrate openclaw` | Execute OpenClaw migration |
-| `nullclaw history list [--limit N] [--offset N] [--json]` | List conversation sessions |
-| `nullclaw history show <session_id> [--limit N] [--offset N] [--json]` | Show messages for a session |
+| `krustyklaw onboard --api-key sk-... --provider openrouter` | Quick setup for provider and API key |
+| `krustyklaw onboard --interactive` | Full interactive setup |
+| `krustyklaw onboard --channels-only` | Reconfigure channels and allowlists only |
+| `krustyklaw agent -m "..."` | Single-message mode |
+| `krustyklaw agent` | Interactive mode |
+| `krustyklaw gateway` | Start long-running runtime (default `127.0.0.1:3000`) |
+| `krustyklaw service install` | Install background service |
+| `krustyklaw service start` | Start background service |
+| `krustyklaw service status` | Check service status |
+| `krustyklaw service stop` | Stop background service |
+| `krustyklaw service uninstall` | Uninstall background service |
+| `krustyklaw doctor` | Run diagnostics |
+| `krustyklaw status` | Show global status |
+| `krustyklaw channel status` | Show channel health |
+| `krustyklaw channel start telegram` | Start a specific channel |
+| `krustyklaw migrate openclaw --dry-run` | Dry-run OpenClaw migration |
+| `krustyklaw migrate openclaw` | Execute OpenClaw migration |
+| `krustyklaw history list [--limit N] [--offset N] [--json]` | List conversation sessions |
+| `krustyklaw history show <session_id> [--limit N] [--offset N] [--json]` | Show messages for a session |
 
 ## Service Mode Recommendations
 
@@ -73,19 +73,19 @@ For long-running deployments:
 - macOS uses `launchctl`.
 - Linux uses `systemd --user` when available and falls back to OpenRC on Alpine/OpenRC systems.
 - Windows uses the Service Control Manager.
-- If Linux has neither working `systemd --user` nor the required OpenRC commands, service subcommands fail; use foreground `nullclaw gateway` or another supervisor instead.
+- If Linux has neither working `systemd --user` nor the required OpenRC commands, service subcommands fail; use foreground `krustyklaw gateway` or another supervisor instead.
 
 ```bash
-nullclaw service install
-nullclaw service start
-nullclaw service status
+krustyklaw service install
+krustyklaw service start
+krustyklaw service status
 ```
 
 After significant config changes, restart service:
 
 ```bash
-nullclaw service stop
-nullclaw service start
+krustyklaw service stop
+krustyklaw service start
 ```
 
 ## Gateway and Pairing
@@ -107,7 +107,7 @@ curl http://127.0.0.1:3000/health
 
 Steps:
 
-1. Run `nullclaw doctor` for exact error details.
+1. Run `krustyklaw doctor` for exact error details.
 2. Compare with `config.example.json` for key names and nesting.
 3. Validate JSON syntax (commas, quotes, braces).
 
@@ -122,13 +122,13 @@ Common causes:
 Checks:
 
 ```bash
-nullclaw status
+krustyklaw status
 ```
 
 Then re-run onboarding:
 
 ```bash
-nullclaw onboard --interactive
+krustyklaw onboard --interactive
 ```
 
 ### 3) Channel receives no messages
@@ -137,7 +137,7 @@ Check:
 
 - `channels.<name>.accounts.*` token/webhook/account settings.
 - `allow_from` accidentally set to empty array.
-- `nullclaw channel status` health output.
+- `krustyklaw channel status` health output.
 - For DingTalk-specific stream and reply-target checks, open
   [DingTalk Ops Readiness](./ops/dingtalk-ops-readiness.md).
 
@@ -159,9 +159,9 @@ Common causes:
 
 Checks:
 
-- For foreground runs, start with `nullclaw agent --verbose`.
-- For service mode, inspect `~/.nullclaw/logs/daemon.stdout.log` and `~/.nullclaw/logs/daemon.stderr.log`.
-- Run `nullclaw status` to confirm the current provider/model pair.
+- For foreground runs, start with `krustyklaw agent --verbose`.
+- For service mode, inspect `~/.krustyklaw/logs/daemon.stdout.log` and `~/.krustyklaw/logs/daemon.stderr.log`.
+- Run `krustyklaw status` to confirm the current provider/model pair.
 
 If the plan is valid but fragile, tune reliability conservatively:
 
@@ -175,23 +175,23 @@ If the plan is valid but fragile, tune reliability conservatively:
 }
 ```
 
-If you have multiple keys for the same provider, add `reliability.api_keys` so NullClaw can rotate them.
+If you have multiple keys for the same provider, add `reliability.api_keys` so KrustyKlaw can rotate them.
 
 ## Post-Change Checklist
 
 After config edits:
 
 ```bash
-nullclaw doctor
-nullclaw status
-nullclaw channel status
-nullclaw agent -m "self-check"
+krustyklaw doctor
+krustyklaw status
+krustyklaw channel status
+krustyklaw agent -m "self-check"
 ```
 
 For gateway scenarios:
 
 ```bash
-nullclaw gateway
+krustyklaw gateway
 curl http://127.0.0.1:3000/health
 ```
 
