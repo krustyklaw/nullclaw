@@ -1348,7 +1348,7 @@ pub const BrowserComputerUseConfig = struct {
 };
 
 pub const BrowserConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     session_name: ?[]const u8 = null,
     backend: []const u8 = "agent_browser",
     native_headless: bool = true,
@@ -1361,7 +1361,7 @@ pub const BrowserConfig = struct {
 // ── HTTP request config ─────────────────────────────────────────
 
 pub const HttpRequestConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     max_response_size: u32 = 1_000_000,
     timeout_secs: u64 = 30,
     allowed_domains: []const []const u8 = &.{},
@@ -1718,7 +1718,7 @@ test "WebConfig defaults" {
     try std.testing.expect(!cfg.relay_e2e_required);
 }
 
-test "security defaults stay least-privilege" {
+test "security defaults enable web tools" {
     const diagnostics = DiagnosticsConfig{};
     try std.testing.expect(diagnostics.api_error_max_chars == null);
 
@@ -1730,8 +1730,11 @@ test "security defaults stay least-privilege" {
     try std.testing.expect(autonomy.block_high_risk_commands);
     try std.testing.expect(!autonomy.allow_raw_url_chars);
 
+    const browser = BrowserConfig{};
+    try std.testing.expect(browser.enabled);
+
     const http_request = HttpRequestConfig{};
-    try std.testing.expect(!http_request.enabled);
+    try std.testing.expect(http_request.enabled);
     try std.testing.expect(http_request.proxy == null);
     try std.testing.expect(http_request.search_base_url == null);
     try std.testing.expectEqualStrings("auto", http_request.search_provider);

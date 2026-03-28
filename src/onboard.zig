@@ -296,6 +296,14 @@ pub fn defaultModelForProvider(provider: []const u8) []const u8 {
     return "anthropic/claude-sonnet-4.6";
 }
 
+fn writeWebToolSummary(out: anytype) !void {
+    try out.writeAll("  Web tools are fully loaded by default:\n");
+    try out.writeAll("    - http_request, web_search, web_fetch\n");
+    try out.writeAll("    - browser (browser_open requires allowed_domains)\n");
+    try out.writeAll("    - outbound network access depends on runtime policy\n");
+}
+
+// NOTE: No unit test for onboarding output helpers — exercised by manual CLI onboarding.
 fn writeOnboardingNextSteps(out: anytype, api_key_env_hint: ?[]const u8) !void {
     try out.writeAll("\n  Next steps:\n");
     if (api_key_env_hint) |env_hint| {
@@ -309,6 +317,9 @@ fn writeOnboardingNextSteps(out: anytype, api_key_env_hint: ?[]const u8) !void {
         try out.writeAll("    2. Gateway:           krustyklaw gateway\n");
         try out.writeAll("    3. Status:            krustyklaw status\n");
     }
+    try out.writeAll("    4. If you hit a tool-disabled error or need re-onboarding, run: krustyklaw onboard\n");
+    try out.writeAll("\n");
+    try writeWebToolSummary(out);
     try out.writeAll("\n");
 }
 
@@ -993,8 +1004,11 @@ pub fn runQuickSetup(allocator: std.mem.Allocator, api_key: ?[]const u8, provide
     else
         "not required"});
     try stdout.print("  [OK] Memory:     {s}\n", .{cfg.memory.backend});
+    try stdout.writeAll("\n");
+    try writeWebToolSummary(stdout);
     try stdout.writeAll("\n  Next steps:\n");
     try printProviderNextSteps(stdout, cfg.default_provider, providerEnvVar(cfg.default_provider), quick_requires_api_key, cfg.defaultProviderKey() != null);
+    try stdout.writeAll("    4. If a tool is unavailable or you see tool-disabled errors, run: krustyklaw onboard\n");
     try stdout.writeAll("\n");
     try stdout.flush();
 }
@@ -2281,9 +2295,12 @@ pub fn runWizard(allocator: std.mem.Allocator) !void {
     try out.print("  [OK] Tunnel:     {s}\n", .{cfg.tunnel.provider});
     try out.print("  [OK] Workspace:  {s}\n", .{cfg.workspace_dir});
     try out.print("  [OK] Config:     {s}\n", .{cfg.config_path});
+    try out.writeAll("\n");
+    try writeWebToolSummary(out);
     try out.writeAll("\n  Next steps:\n");
     const final_env_hint = if (provider_idx < known_providers.len) known_providers[provider_idx].env_var else "API_KEY";
     try printProviderNextSteps(out, cfg.default_provider, final_env_hint, requires_api_key, cfg.defaultProviderKey() != null);
+    try out.writeAll("    4. If a tool is unavailable or you see tool-disabled errors, run: krustyklaw onboard\n");
     try out.writeAll("\n");
     try out.flush();
 }
