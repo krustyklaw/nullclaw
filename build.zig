@@ -505,6 +505,8 @@ pub fn build(b: *std.Build) void {
     const build_options_module = build_options.createModule();
 
     // ---------- library module (importable by consumers) ----------
+    const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
+
     const lib_mod: ?*std.Build.Module = if (is_wasi) null else blk: {
         const module = b.addModule("krustyklaw", .{
             .root_source_file = b.path("src/root.zig"),
@@ -525,6 +527,7 @@ pub fn build(b: *std.Build) void {
             });
             module.addImport("websocket", ws_dep.module("websocket"));
         }
+        module.addImport("webview", webview_dep.module("webview"));
         if (enable_embedded_wasm3) {
             addEmbeddedWasm3(module, b, target, optimize);
         }
@@ -532,8 +535,6 @@ pub fn build(b: *std.Build) void {
     };
 
     // ---------- executable ----------
-    const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
-
     const exe_imports: []const std.Build.Module.Import = if (is_wasi)
         &.{}
     else
