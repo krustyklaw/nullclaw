@@ -15,6 +15,10 @@
             .url = "git+https://github.com/nullclaw/wasm3#8a29b0080f1f65dbbe8b8f8c4d8148480feff377",
             .hash = "wasm3-0.5.1-hrMdNS09BQAWSU0TI6mVS8KfW4hxexjFvyOQINgphwKu",
         },
+        .webview = .{
+            .url = "git+https://github.com/thechampagne/webview-zig?ref=main#a5eef0bbff65c914ea893dae0816b956bcdee6c6",
+            .hash = "webview-0.1.0-ImQK_8_aIABj-dmipgQ_Cw1trbEFExFQwMZetkgtT8fg",
+        },
     },
     .paths = .{
         "build.zig",

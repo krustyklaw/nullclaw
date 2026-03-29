@@ -532,6 +532,8 @@ pub fn build(b: *std.Build) void {
     };
 
     // ---------- executable ----------
+    const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
+
     const exe_imports: []const std.Build.Module.Import = if (is_wasi)
         &.{}
     else
@@ -555,6 +557,9 @@ pub fn build(b: *std.Build) void {
             .root_module = exe_root_module,
         });
     exe.root_module.addImport("build_options", build_options_module);
+    if (!is_wasi) {
+        exe.root_module.addImport("webview", webview_dep.module("webview"));
+    }
 
     // Link SQLite on the compile step (not the module)
     if (!is_wasi) {

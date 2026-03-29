@@ -10,6 +10,7 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
+const webview = @import("webview");
 
 const Config = @import("config.zig").Config;
 const onboard = @import("onboard.zig");
@@ -418,30 +419,22 @@ fn dispatch(allocator: std.mem.Allocator, stream: *std.net.Stream, raw: []const 
     writeJson(stream, "404 Not Found", "{\"error\":\"not found\"}");
 }
 
-// ── Browser launch ──────────────────────────────────────────────
+// ── Entry point ─────────────────────────────────────────────────
 
-fn openBrowser(allocator: std.mem.Allocator, url: []const u8) void {
-    if (comptime builtin.os.tag == .windows) {
-        // "cmd /c start "" <url>" opens the default browser
-        var child = std.process.Child.init(
-            &.{ "cmd", "/c", "start", "", url },
-            allocator,
-        );
-        child.spawn() catch return;
-        _ = child.wait() catch {};
-    } else if (comptime builtin.os.tag == .macos) {
-        var child = std.process.Child.init(&.{ "open", url }, allocator);
-        child.spawn() catch return;
-        _ = child.wait() catch {};
-    } else {
-        // Linux: try xdg-open
-        var child = std.process.Child.init(&.{ "xdg-open", url }, allocator);
-        child.spawn() catch return;
-        _ = child.wait() catch {};
+fn serverLoop(server: *std.net.Server, allocator: std.mem.Allocator) void {
+    // Accept loop
+    while (true) {
+        var conn = server.accept() catch break;
+        defer conn.stream.close();
+
+        var arena = std.heap.ArenaAllocator.init(allocator);
+        defer arena.deinit();
+        const req_alloc = arena.allocator();
+
+        const raw = readRequest(req_alloc, &conn.stream) catch continue;
+        dispatch(req_alloc, &conn.stream, raw);
     }
 }
-
-// ── Entry point ─────────────────────────────────────────────────
 
 pub fn run(allocator: std.mem.Allocator) !void {
     // Find an available port starting at DEFAULT_PORT
@@ -469,20 +462,17 @@ pub fn run(allocator: std.mem.Allocator) !void {
     w.print("KrustyKlaw desktop UI starting at {s}\n", .{url}) catch {};
     w.flush() catch {};
 
-    // Small delay so the server is ready before the browser hits it
-    std.Thread.sleep(80 * std.time.ns_per_ms);
-    openBrowser(allocator, url);
+    const server_thread = try std.Thread.spawn(.{}, serverLoop, .{ &server, allocator });
+    server_thread.detach();
 
-    // Accept loop
-    while (true) {
-        var conn = server.accept() catch continue;
-        defer conn.stream.close();
+    var wv = webview.WebView.create(false, null);
+    defer wv.destroy() catch |err| { std.log.err("{}", .{err}); };
 
-        var arena = std.heap.ArenaAllocator.init(allocator);
-        defer arena.deinit();
-        const req_alloc = arena.allocator();
+    wv.setTitle("KrustyKlaw") catch |err| { std.log.err("{}", .{err}); };
+    wv.setSize(1024, 768, webview.WebView.WindowSizeHint.none) catch |err| { std.log.err("{}", .{err}); };
 
-        const raw = readRequest(req_alloc, &conn.stream) catch continue;
-        dispatch(req_alloc, &conn.stream, raw);
-    }
+    const url_z = try allocator.dupeZ(u8, url);
+    defer allocator.free(url_z);
+    wv.navigate(url_z) catch |err| { std.log.err("{}", .{err}); };
+    wv.run() catch |err| { std.log.err("{}", .{err}); };
 }
