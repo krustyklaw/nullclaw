@@ -637,6 +637,11 @@ pub fn build(b: *std.Build) void {
     if (!is_wasi) {
         exe.root_module.addImport("webview", webview_dep.module("webview"));
         exe.linkLibrary(webview_lib);
+        if (target.result.os.tag == .macos) {
+            if (findMacosSdkFrameworksPath(b)) |fw_path| {
+                exe.addFrameworkPath(.{ .cwd_relative = fw_path });
+            }
+        }
     }
 
     // Link SQLite on the compile step (not the module)
