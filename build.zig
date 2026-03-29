@@ -10,6 +10,7 @@ pub fn build(b: *std.Build) void {
     const app_version = b.option([]const u8, "version", "Version string") orelse "dev";
 
     // Dependencies
+    const websocket_dep = b.dependency("websocket", .{ .target = target, .optimize = optimize });
     const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
     const webview_lib = webview_dep.artifact("webviewStatic");
     
@@ -68,6 +69,7 @@ pub fn build(b: *std.Build) void {
     });
     lib_mod.addImport("build_options", options_mod);
     lib_mod.linkLibrary(sqlite3_lib);
+    lib_mod.addImport("websocket", websocket_dep.module("websocket"));
     lib_mod.addImport("webview", webview_dep.module("webview"));
     lib_mod.linkLibrary(webview_lib);
 
