@@ -26,27 +26,22 @@ jobs:
             target: linux-x86_64
             zig_target: x86_64-linux-gnu
             zig_cpu: ""
-            ext: ""
           - os: macos-latest
             target: macos-aarch64
             zig_target: aarch64-macos
             zig_cpu: ""
-            ext: ""
           - os: macos-latest
             target: macos-x86_64
             zig_target: x86_64-macos
             zig_cpu: ""
-            ext: ""
           - os: windows-latest
             target: windows-x86_64
             zig_target: x86_64-windows
             zig_cpu: ""
-            ext: ".exe"
           - os: windows-latest
             target: windows-aarch64
             zig_target: aarch64-windows
             zig_cpu: ""
-            ext: ".exe"
 
     steps:
       - uses: actions/checkout@v6
@@ -86,11 +81,88 @@ jobs:
           fi
           zig build "${zig_args[@]}"
 
+      # ── Linux: package as AppImage ────────────────────────────────────────
+      - name: Package AppImage (Linux)
+        if: matrix.target == 'linux-x86_64'
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
+
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          cp zig-out/bin/nullclaw AppDir/usr/bin/nullclaw
+          cp nullclaw.png AppDir/usr/share/icons/hicolor/256x256/apps/nullclaw.png
+
+          cat > AppDir/usr/share/applications/nullclaw.desktop <<'EOF'
+          [Desktop Entry]
+          Name=Nullclaw
+          Exec=nullclaw
+          Icon=nullclaw
+          Type=Application
+          Categories=Utility;AI;
+          EOF
+
+          DEPLOY_GTK_VERSION=3 ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --plugin gtk \
+            --output appimage
+
+          mv Nullclaw-*.AppImage nullclaw-linux-x86_64.AppImage
+
+      # ── macOS: package as .app bundle inside a .dmg ───────────────────────
+      - name: Package .app + .dmg (macOS)
+        if: startsWith(matrix.target, 'macos-')
+        run: |
+          APP="Nullclaw.app"
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+          cp zig-out/bin/nullclaw "$APP/Contents/MacOS/nullclaw"
+
+          cat > "$APP/Contents/Info.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>      <string>nullclaw</string>
+            <key>CFBundleIdentifier</key>      <string>com.nullclaw.nullclaw</string>
+            <key>CFBundleName</key>            <string>Nullclaw</string>
+            <key>CFBundleVersion</key>         <string>${{ steps.version.outputs.value }}</string>
+            <key>CFBundleShortVersionString</key><string>${{ steps.version.outputs.value }}</string>
+            <key>CFBundlePackageType</key>     <string>APPL</string>
+            <key>NSHighResolutionCapable</key> <true/>
+            <key>LSMinimumSystemVersion</key>  <string>12.0</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Ad-hoc sign so Gatekeeper doesn't block it on first launch
+          codesign --force --deep --sign - "$APP"
+
+          # Wrap in a .dmg
+          hdiutil create \
+            -volname "Nullclaw" \
+            -srcfolder "$APP" \
+            -ov -format UDZO \
+            nullclaw-${{ matrix.target }}.dmg
+
+      # ── Windows: wrap in a self-extracting zip ────────────────────────────
+      # WebView2 is built into Windows 10/11 so the .exe runs as-is.
+      # We just rename it to something user-friendly.
+      - name: Rename Windows binary
+        if: startsWith(matrix.target, 'windows-')
+        run: mv zig-out/bin/nullclaw.exe nullclaw-${{ matrix.target }}.exe
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: nullclaw-${{ matrix.target }}
-          path: zig-out/bin/nullclaw${{ matrix.ext }}
+          path: |
+            nullclaw-linux-x86_64.AppImage
+            nullclaw-macos-*.dmg
+            nullclaw-windows-*.exe
 
   release:
     needs: build
@@ -101,14 +173,8 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v8
-
-      - name: Rename binaries
-        run: |
-          mv nullclaw-linux-x86_64/nullclaw nullclaw-linux-x86_64.bin
-          mv nullclaw-macos-aarch64/nullclaw nullclaw-macos-aarch64.bin
-          mv nullclaw-macos-x86_64/nullclaw nullclaw-macos-x86_64.bin
-          mv nullclaw-windows-x86_64/nullclaw.exe nullclaw-windows-x86_64.exe
-          mv nullclaw-windows-aarch64/nullclaw.exe nullclaw-windows-aarch64.exe
+        with:
+          merge-multiple: true
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -116,9 +182,9 @@ jobs:
           tag_name: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref_name }}
           prerelease: ${{ github.event_name == 'pull_request' }}
           files: |
-            nullclaw-linux-x86_64.bin
-            nullclaw-macos-aarch64.bin
-            nullclaw-macos-x86_64.bin
+            nullclaw-linux-x86_64.AppImage
+            nullclaw-macos-aarch64.dmg
+            nullclaw-macos-x86_64.dmg
             nullclaw-windows-x86_64.exe
             nullclaw-windows-aarch64.exe
           generate_release_notes: true
