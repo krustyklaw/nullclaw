@@ -9,7 +9,9 @@
       "Bash(powershell -Command \"Stop-Process -Name nullclaw -Force -ErrorAction SilentlyContinue; Start-Sleep 1\")",
       "Bash(curl:*)",
       "Bash(zig-out/bin/krustyklaw.exe version:*)",
-      "Bash(zig-out/bin/krustyklaw.exe help:*)"
+      "Bash(zig-out/bin/krustyklaw.exe help:*)",
+      "Bash(cp:*)",
+      "Bash(grep -n \"__time64_t\\\\|__int64_t\" ~/.cache/zig/p/webview-0.1.0-*/build.zig)"
     ]
   }
 }
