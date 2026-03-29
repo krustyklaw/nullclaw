@@ -94,6 +94,7 @@ pub const McpServer = struct {
         child.stdin_behavior = .Pipe;
         child.stdout_behavior = .Pipe;
         child.stderr_behavior = .Pipe;
+        if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
         // Build environment: inherit parent + config overrides
         var env = std.process.EnvMap.init(self.allocator);

@@ -183,6 +183,7 @@ fn curlRequestWithProxy(
     child.stdin_behavior = .Pipe;
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
     const cancel_flag = thread_interrupt_flag;
@@ -329,6 +330,7 @@ pub fn curlPostWithStatusAndTimeout(
     child.stdin_behavior = .Pipe;
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
     const cancel_flag = thread_interrupt_flag;
@@ -456,6 +458,7 @@ pub fn curlPostWithStatusHeadersAndTimeout(
     child.stdin_behavior = .Pipe;
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
     const cancel_flag = thread_interrupt_flag;
@@ -575,6 +578,7 @@ pub fn curlGetWithStatusAndTimeout(
     var child = std.process.Child.init(argv_buf[0..argc], allocator);
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
     const cancel_flag = thread_interrupt_flag;
@@ -690,6 +694,7 @@ fn curlGetWithProxyAndResolve(
     var child = std.process.Child.init(argv_buf[0..argc], allocator);
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
     const cancel_flag = thread_interrupt_flag;
@@ -860,6 +865,7 @@ pub fn curlGetSSE(
     child.stdin_behavior = .Ignore;
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     child.spawn() catch |err| {
         std.debug.print("[curlGetSSE] spawn failed: {}\n", .{err});

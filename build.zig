@@ -107,6 +107,12 @@ pub fn build(b: *std.Build) void {
         exe.root_module.strip = true;
     }
 
+    // On Windows, suppress the console window so double-clicking the EXE
+    // opens only the WebView GUI with no terminal.
+    if (target.result.os.tag == .windows) {
+        exe.subsystem = .Windows;
+    }
+
     b.installArtifact(exe);
 
     // Run step

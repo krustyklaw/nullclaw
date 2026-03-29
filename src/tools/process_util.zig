@@ -203,6 +203,7 @@ pub fn run(
     var child = std.process.Child.init(argv, allocator);
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Pipe;
+    if (comptime builtin.os.tag == .windows) child.create_no_window = true;
     if (opts.cwd) |cwd| child.cwd = cwd;
     if (opts.env_map) |env| child.env_map = env;
 

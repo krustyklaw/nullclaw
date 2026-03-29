@@ -752,6 +752,7 @@ pub fn curlStreamAnthropic(
     var child = std.process.Child.init(argv_buf[0..argc], allocator);
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime builtin.os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
 

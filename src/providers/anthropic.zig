@@ -619,6 +619,7 @@ fn curlPostOAuth(allocator: std.mem.Allocator, url: []const u8, body: []const u8
     child.stdin_behavior = .Pipe;
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
+    if (comptime @import("builtin").os.tag == .windows) child.create_no_window = true;
 
     try child.spawn();
 

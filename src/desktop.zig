@@ -456,12 +456,6 @@ pub fn run(allocator: std.mem.Allocator) !void {
     var url_buf: [32]u8 = undefined;
     const url = std.fmt.bufPrint(&url_buf, "http://127.0.0.1:{d}", .{port}) catch "http://127.0.0.1:7280";
 
-    var stdout_buf: [256]u8 = undefined;
-    var bw = std.fs.File.stdout().writer(&stdout_buf);
-    const w = &bw.interface;
-    w.print("KrustyKlaw desktop UI starting at {s}\n", .{url}) catch {};
-    w.flush() catch {};
-
     const server_thread = try std.Thread.spawn(.{}, serverLoop, .{ &server, allocator });
     server_thread.detach();
 
