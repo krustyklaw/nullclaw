@@ -9,7 +9,8 @@
       "Bash(powershell -Command \"Stop-Process -Name nullclaw -Force -ErrorAction SilentlyContinue; Start-Sleep 1\")",
       "Bash(curl:*)",
       "Bash(zig-out/bin/krustyklaw.exe version:*)",
-      "Bash(zig-out/bin/krustyklaw.exe help:*)"
+      "Bash(zig-out/bin/krustyklaw.exe help:*)",
+      "Bash(cp:*)"
     ]
   }
 }
