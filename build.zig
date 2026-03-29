@@ -365,6 +365,32 @@ fn ensureAndroidBuildEnvironment(b: *std.Build) void {
     std.process.exit(1);
 }
 
+// Scans C:\Program Files (x86)\Windows Kits\10\Include\ for the latest
+// installed version and returns its \winrt subdirectory, which contains
+// EventToken.h required by the bundled WebView2.h header.
+// Returns null on non-Windows hosts or when the SDK is not found.
+fn findWindowsSdkWinRtInclude(b: *std.Build) ?[]const u8 {
+    // Allow an explicit override via environment variable.
+    if (std.process.getEnvVarOwned(b.allocator, "WINRT_INCLUDE") catch null) |p| return p;
+
+    const kits_include = "C:\\Program Files (x86)\\Windows Kits\\10\\Include";
+    var kits_dir = std.fs.openDirAbsolute(kits_include, .{ .iterate = true }) catch return null;
+    defer kits_dir.close();
+
+    // Pick the lexicographically greatest version directory (e.g. 10.0.26100.0).
+    var latest: []const u8 = "";
+    var it = kits_dir.iterate();
+    while (it.next() catch null) |entry| {
+        if (entry.kind != .directory) continue;
+        if (std.mem.order(u8, entry.name, latest) == .gt) {
+            latest = b.allocator.dupe(u8, entry.name) catch continue;
+        }
+    }
+
+    if (latest.len == 0) return null;
+    return b.fmt("{s}\\{s}\\winrt", .{ kits_include, latest });
+}
+
 fn addEmbeddedWasm3(module: *std.Build.Module, b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
     const wasm3_dep = b.dependency("wasm3", .{
         .target = target,
@@ -507,6 +533,26 @@ pub fn build(b: *std.Build) void {
     // ---------- library module (importable by consumers) ----------
     const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
     const webview_lib = webview_dep.artifact("webviewStatic");
+    // Zig's paths_first library resolution does not scan standard linker paths.
+    // On Debian/Ubuntu, GTK/WebKit shared libs live in the multiarch directory
+    // which is absent from the default search list, causing "searched paths: none".
+    if (target.result.os.tag == .linux) {
+        webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib" });
+        switch (target.result.cpu.arch) {
+            .x86_64 => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/x86_64-linux-gnu" }),
+            .aarch64 => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/aarch64-linux-gnu" }),
+            .x86 => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/i386-linux-gnu" }),
+            .arm => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/arm-linux-gnueabihf" }),
+            else => {},
+        }
+    }
+    // WebView2.h (bundled with webview-zig) includes EventToken.h from the
+    // Windows SDK WinRT headers, which Zig does not add to the include path.
+    if (target.result.os.tag == .windows) {
+        if (findWindowsSdkWinRtInclude(b)) |winrt_path| {
+            webview_lib.addIncludePath(.{ .cwd_relative = winrt_path });
+        }
+    }
 
     const lib_mod: ?*std.Build.Module = if (is_wasi) null else blk: {
         const module = b.addModule("krustyklaw", .{

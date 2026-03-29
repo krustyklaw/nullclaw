@@ -60,6 +60,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
 
+      - name: Set macOS SDK root
+        if: startsWith(matrix.target, 'macos-')
+        run: echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+
       - name: Resolve build version
         id: version
         run: |
