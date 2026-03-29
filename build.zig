@@ -379,14 +379,12 @@ fn findMacosSdkFrameworksPath(b: *std.Build) ?[]const u8 {
     child.stdout_behavior = .Pipe;
     child.stderr_behavior = .Ignore;
     child.spawn() catch return null;
-    var read_buf: [512]u8 = undefined;
-    var out_buf: [4096]u8 = undefined;
-    const n = child.stdout.?.reader(&read_buf).readAll(&out_buf) catch {
+    const stdout = child.stdout.?.readToEndAlloc(b.allocator, 4096) catch {
         _ = child.wait() catch {};
         return null;
     };
     _ = child.wait() catch {};
-    const sdk = std.mem.trim(u8, out_buf[0..n], " \n\r\t");
+    const sdk = std.mem.trim(u8, stdout, " \n\r\t");
     if (sdk.len == 0) return null;
     return b.fmt("{s}/System/Library/Frameworks", .{sdk});
 }
