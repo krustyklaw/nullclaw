@@ -68,7 +68,7 @@ pub fn build(b: *std.Build) void {
             staticLib.linkSystemLibrary("user32");
         },
         .macos => {
-            staticLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-std=c++17"} });
+            staticLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-x", "objective-c++"} });
             staticLib.linkFramework("WebKit");
         },
         .freebsd => {
@@ -117,7 +117,7 @@ pub fn build(b: *std.Build) void {
             sharedLib.linkSystemLibrary("user32");
         },
         .macos => {
-            sharedLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-std=c++17"} });
+            sharedLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-x", "objective-c++"} });
             sharedLib.linkFramework("WebKit");
         },
         .freebsd => {
