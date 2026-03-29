@@ -506,6 +506,7 @@ pub fn build(b: *std.Build) void {
 
     // ---------- library module (importable by consumers) ----------
     const webview_dep = b.dependency("webview", .{ .target = target, .optimize = optimize });
+    const webview_lib = webview_dep.artifact("webviewStatic");
 
     const lib_mod: ?*std.Build.Module = if (is_wasi) null else blk: {
         const module = b.addModule("krustyklaw", .{
@@ -528,6 +529,7 @@ pub fn build(b: *std.Build) void {
             module.addImport("websocket", ws_dep.module("websocket"));
         }
         module.addImport("webview", webview_dep.module("webview"));
+        module.linkLibrary(webview_lib);
         if (enable_embedded_wasm3) {
             addEmbeddedWasm3(module, b, target, optimize);
         }
@@ -560,6 +562,7 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addImport("build_options", build_options_module);
     if (!is_wasi) {
         exe.root_module.addImport("webview", webview_dep.module("webview"));
+        exe.linkLibrary(webview_lib);
     }
 
     // Link SQLite on the compile step (not the module)
