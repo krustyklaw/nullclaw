@@ -369,6 +369,26 @@ fn ensureAndroidBuildEnvironment(b: *std.Build) void {
 // installed version and returns its \winrt subdirectory, which contains
 // EventToken.h required by the bundled WebView2.h header.
 // Returns null on non-Windows hosts or when the SDK is not found.
+fn findMacosSdkFrameworksPath(b: *std.Build) ?[]const u8 {
+    // SDKROOT is set by Xcode / xcrun environments.
+    if (std.process.getEnvVarOwned(b.allocator, "SDKROOT") catch null) |sdk| {
+        return b.fmt("{s}/System/Library/Frameworks", .{sdk});
+    }
+    // Ask xcrun for the active SDK path (works on Command Line Tools and full Xcode).
+    var child = std.process.Child.init(&.{ "xcrun", "--show-sdk-path" }, b.allocator);
+    child.stdout_behavior = .Pipe;
+    child.stderr_behavior = .Ignore;
+    child.spawn() catch return null;
+    const stdout = child.stdout.?.reader().readAllAlloc(b.allocator, 4096) catch {
+        _ = child.wait() catch {};
+        return null;
+    };
+    _ = child.wait() catch {};
+    const sdk = std.mem.trim(u8, stdout, " \n\r\t");
+    if (sdk.len == 0) return null;
+    return b.fmt("{s}/System/Library/Frameworks", .{sdk});
+}
+
 fn findWindowsSdkWinRtInclude(b: *std.Build) ?[]const u8 {
     // Allow an explicit override via environment variable.
     if (std.process.getEnvVarOwned(b.allocator, "WINRT_INCLUDE") catch null) |p| return p;
@@ -544,6 +564,14 @@ pub fn build(b: *std.Build) void {
             .x86 => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/i386-linux-gnu" }),
             .arm => webview_lib.addLibraryPath(.{ .cwd_relative = "/usr/lib/arm-linux-gnueabihf" }),
             else => {},
+        }
+    }
+    // When cross-compiling between macOS architectures (e.g. aarch64 → x86_64),
+    // Zig does not automatically add the SDK framework search path, causing
+    // "unable to find framework 'WebKit'. searched paths: none".
+    if (target.result.os.tag == .macos) {
+        if (findMacosSdkFrameworksPath(b)) |fw_path| {
+            webview_lib.addFrameworkPath(.{ .cwd_relative = fw_path });
         }
     }
     // WebView2.h (bundled with webview-zig) includes EventToken.h from the
