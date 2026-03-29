@@ -346,10 +346,18 @@ fn handleChat(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
     const response = runAgentTurn(allocator, parsed.value.message, parsed.value.history) catch |err| {
         var out: std.ArrayListUnmanaged(u8) = .empty;
         errdefer out.deinit(allocator);
-        try out.appendSlice(allocator, "{\"error\":");
-        const msg = @errorName(err);
-        try appendJsonString(&out, allocator, msg);
-        try out.append(allocator, '}');
+        if (err == error.AllProvidersFailed) {
+            const detail = providers_mod.snapshotLastApiErrorDetail(allocator) catch null;
+            defer if (detail) |d| allocator.free(d);
+            const detail_str = detail orelse "No API error detail available. Verify your model name, API key, and that the provider service is reachable.";
+            try out.appendSlice(allocator, "{\"error\":\"AllProvidersFailed\",\"detail\":");
+            try appendJsonString(&out, allocator, detail_str);
+            try out.append(allocator, '}');
+        } else {
+            try out.appendSlice(allocator, "{\"error\":");
+            try appendJsonString(&out, allocator, @errorName(err));
+            try out.append(allocator, '}');
+        }
         return out.toOwnedSlice(allocator);
     };
     defer allocator.free(response);

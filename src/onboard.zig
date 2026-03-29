@@ -927,25 +927,16 @@ pub fn runQuickSetup(allocator: std.mem.Allocator, api_key: ?[]const u8, provide
     var stdout_buf: [4096]u8 = undefined;
     var bw = std.fs.File.stdout().writer(&stdout_buf);
     const stdout = &bw.interface;
-    try stdout.writeAll(BANNER);
-    try stdout.writeAll("  Quick Setup -- generating config with sensible defaults...\n\n");
+    stdout.writeAll(BANNER) catch {};
+    stdout.writeAll("  Quick Setup -- generating config with sensible defaults...\n\n") catch {};
 
     // Load or create config
     var cfg = Config.load(allocator) catch try initFreshConfig(allocator);
     defer cfg.deinit();
     try ensureSecretsEncryptionEnabled(&cfg);
 
-    // Only Anthropic is supported as a provider
-    if (provider) |p| {
-        const canonical = canonicalProviderName(p);
-        if (!std.mem.eql(u8, canonical, "anthropic")) {
-            try stdout.writeAll("  Error: Only Anthropic is supported as a provider.\n");
-            try stdout.writeAll("  Run again without --provider or use --provider anthropic.\n\n");
-            try stdout.flush();
-            return error.OnlyAnthropicSupported;
-        }
-    }
-    cfg.default_provider = "anthropic";
+    const chosen_provider = if (provider) |p| canonicalProviderName(p) else "anthropic";
+    cfg.default_provider = try cfg.allocator.dupe(u8, chosen_provider);
     if (api_key) |key| {
         // Store in providers section for the default provider (arena frees old values)
         const entries = try cfg.allocator.alloc(config_mod.ProviderEntry, 1);
@@ -965,7 +956,7 @@ pub fn runQuickSetup(allocator: std.mem.Allocator, api_key: ?[]const u8, provide
     // Set default model based on provider
     if (model) |m| {
         cfg.default_model = try cfg.allocator.dupe(u8, m);
-    } else if (cfg.default_model == null or std.mem.eql(u8, cfg.default_model.?, "anthropic/claude-sonnet-4")) {
+    } else if (cfg.default_model == null) {
         cfg.default_model = defaultModelForProvider(cfg.default_provider);
     }
 
@@ -999,25 +990,25 @@ pub fn runQuickSetup(allocator: std.mem.Allocator, api_key: ?[]const u8, provide
     // Save config so subsequent commands can find it
     try cfg.save();
 
-    // Print summary
-    try stdout.print("  [OK] Workspace:  {s}\n", .{cfg.workspace_dir});
-    try stdout.print("  [OK] Provider:   {s}\n", .{cfg.default_provider});
+    // Print summary (non-fatal — stdout may be unavailable in desktop/GUI mode)
+    stdout.print("  [OK] Workspace:  {s}\n", .{cfg.workspace_dir}) catch {};
+    stdout.print("  [OK] Provider:   {s}\n", .{cfg.default_provider}) catch {};
     if (cfg.default_model) |m| {
-        try stdout.print("  [OK] Model:      {s}\n", .{m});
+        stdout.print("  [OK] Model:      {s}\n", .{m}) catch {};
     }
     const quick_requires_api_key = providerRequiresApiKeyForSetup(cfg.default_provider, cfg.getProviderBaseUrl(cfg.default_provider));
-    try stdout.print("  [OK] API Key:    {s}\n", .{if (quick_requires_api_key)
+    stdout.print("  [OK] API Key:    {s}\n", .{if (quick_requires_api_key)
         (if (cfg.defaultProviderKey() != null) "set" else "not set (use --api-key or edit config)")
     else
-        "not required"});
-    try stdout.print("  [OK] Memory:     {s}\n", .{cfg.memory.backend});
-    try stdout.writeAll("\n");
-    try writeWebToolSummary(stdout);
-    try stdout.writeAll("\n  Next steps:\n");
-    try printProviderNextSteps(stdout, cfg.default_provider, providerEnvVar(cfg.default_provider), quick_requires_api_key, cfg.defaultProviderKey() != null);
-    try stdout.writeAll("    4. If a tool is unavailable or you see tool-disabled errors, run: krustyklaw onboard\n");
-    try stdout.writeAll("\n");
-    try stdout.flush();
+        "not required"}) catch {};
+    stdout.print("  [OK] Memory:     {s}\n", .{cfg.memory.backend}) catch {};
+    stdout.writeAll("\n") catch {};
+    writeWebToolSummary(stdout) catch {};
+    stdout.writeAll("\n  Next steps:\n") catch {};
+    printProviderNextSteps(stdout, cfg.default_provider, providerEnvVar(cfg.default_provider), quick_requires_api_key, cfg.defaultProviderKey() != null) catch {};
+    stdout.writeAll("    4. If a tool is unavailable or you see tool-disabled errors, run: krustyklaw onboard\n") catch {};
+    stdout.writeAll("\n") catch {};
+    stdout.flush() catch {};
 }
 
 /// Main entry point — called from main.zig as `onboard.run(allocator)`.

@@ -1813,17 +1813,51 @@
                         </div>
                     </div>
 
-                    <!-- Step 1: API Key -->
+                    <!-- Step 1: Provider + API Key -->
                     <div class="wizard-step" id="step-1">
-                        <div class="step-title" id="apikey-title">
-                            Enter your Anthropic API key
-                        </div>
-                        <div class="step-desc" id="apikey-desc">
-                            Your API key is stored locally and never sent
-                            anywhere except directly to Anthropic.
+                        <div class="step-title">Choose your AI provider</div>
+                        <div class="step-desc">
+                            Select a provider. Your API key is stored locally and never leaves your device.
                         </div>
                         <div id="wizard-error-1" class="error-msg"></div>
-                        <div class="field-group" id="apikey-field">
+                        <div class="provider-grid">
+                            <div class="provider-card" id="pc-anthropic" onclick="selectProvider('anthropic',true,'console.anthropic.com')">
+                                <div class="p-name">Anthropic</div>
+                                <div class="p-desc">Claude models</div>
+                            </div>
+                            <div class="provider-card" id="pc-openai" onclick="selectProvider('openai',true,'platform.openai.com')">
+                                <div class="p-name">OpenAI</div>
+                                <div class="p-desc">GPT models</div>
+                            </div>
+                            <div class="provider-card" id="pc-openrouter" onclick="selectProvider('openrouter',true,'openrouter.ai')">
+                                <div class="p-name">OpenRouter</div>
+                                <div class="p-desc">Multi-provider gateway</div>
+                            </div>
+                            <div class="provider-card" id="pc-gemini" onclick="selectProvider('gemini',true,'aistudio.google.com')">
+                                <div class="p-name">Gemini</div>
+                                <div class="p-desc">Google AI models</div>
+                            </div>
+                            <div class="provider-card" id="pc-ollama" onclick="selectProvider('ollama',false,null)">
+                                <div class="p-name">Ollama</div>
+                                <div class="p-desc">Local &mdash; no key needed</div>
+                            </div>
+                            <div class="provider-card" id="pc-gemini-cli" onclick="selectProvider('gemini-cli',false,null)">
+                                <div class="p-name">Gemini CLI</div>
+                                <div class="p-desc">Local auth &mdash; no key needed</div>
+                            </div>
+                            <div class="provider-card" id="pc-claude-cli" onclick="selectProvider('claude-cli',false,null)">
+                                <div class="p-name">Claude Code</div>
+                                <div class="p-desc">Local auth &mdash; no key needed</div>
+                            </div>
+                        </div>
+                        <div class="field-group" id="wizard-model-field" style="display:none;margin-top:4px">
+                            <label class="field-label">Model</label>
+                            <select id="wizard-model-select" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 14px;outline:none;-webkit-appearance:none;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%238a8680'%3E%3Cpath d='M0 0l6 8 6-8z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;"></select>
+                            <input type="text" id="wizard-model-override" placeholder="Or type a custom model name…" autocomplete="off"
+                                style="width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 14px;outline:none;transition:border-color 0.15s;" />
+                            <div class="field-hint">Leave blank to use the selection above</div>
+                        </div>
+                        <div class="field-group" id="apikey-field" style="display:none">
                             <label class="field-label">API Key</label>
                             <input
                                 type="password"
@@ -1831,14 +1865,11 @@
                                 placeholder="Paste your API key here"
                                 autocomplete="off"
                             />
-                            <div class="field-hint" id="apikey-hint">
-                                Get your key at console.anthropic.com
-                            </div>
+                            <div class="field-hint" id="apikey-hint"></div>
                         </div>
                         <div class="wizard-actions">
                             <button
                                 class="btn btn-secondary"
-                                id="back-btn"
                                 onclick="goStep(0)"
                             >
                                 Back
@@ -1847,6 +1878,7 @@
                                 class="btn btn-primary"
                                 id="setup-btn"
                                 onclick="doSetup()"
+                                disabled
                             >
                                 Set Up
                             </button>
@@ -1945,11 +1977,12 @@
                 <div class="sidebar-body">
                     <div class="model-select-wrapper">
                         <div class="sidebar-section-label">Model</div>
-                        <select class="model-dropdown" id="model-select">
-                            <option value="anthropic" selected>
-                                Anthropic Claude
-                            </option>
+                        <select class="model-dropdown" id="model-select" onchange="onSidebarModelChange(this.value)">
+                            <option value="">Select a model</option>
                         </select>
+                        <input type="text" id="sidebar-model-override" placeholder="Custom model name…" autocomplete="off"
+                            style="width:100%;margin-top:8px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:8px 14px;outline:none;transition:border-color 0.15s;font-family:inherit;"
+                            onchange="onSidebarModelOverride(this.value)" />
                     </div>
 
                     <div class="config-section" style="margin-bottom: 24px">
@@ -2076,7 +2109,7 @@
                             <div class="main-title">
                                 The AI that actually does things.
                             </div>
-                            <div class="main-subtitle">
+                            <div class="main-subtitle" id="chat-subtitle">
                                 Powered by Anthropic Claude
                             </div>
                         </div>
@@ -2805,6 +2838,9 @@
             // State
             let currentStep = 0;
             let isFirstTime = false;
+            let selectedProvider = null;
+            let providerNeedsKey = false;
+            let providerKeyHint = '';
             let history = [];
             let isLoading = false;
             let researchDocs = JSON.parse(
@@ -2890,6 +2926,12 @@
                                 data.agent_name;
                             updateAgentNameUI(data.agent_name);
                         }
+                        if (data.provider) {
+                            preselectProvider(data.provider, data.model);
+                            populateSidebarModels(data.provider, data.model);
+                            const subtitle = document.getElementById("chat-subtitle");
+                            if (subtitle) subtitle.textContent = "Powered by " + data.provider;
+                        }
                         showScreen("app-shell");
                     } else {
                         isFirstTime = true;
@@ -2932,17 +2974,118 @@
 
             // Setup
 
+            const PROVIDER_HINTS = {
+                'anthropic': 'console.anthropic.com',
+                'openai': 'platform.openai.com',
+                'openrouter': 'openrouter.ai',
+                'gemini': 'aistudio.google.com',
+            };
+            const NO_KEY_PROVIDERS = ['ollama', 'gemini-cli', 'claude-cli'];
+            const PROVIDER_MODELS = {
+                'anthropic':  ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+                'openai':     ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini'],
+                'openrouter': ['anthropic/claude-sonnet-4.6', 'openai/gpt-4o', 'google/gemini-2.5-pro', 'meta-llama/llama-3.3-70b-instruct', 'deepseek/deepseek-chat'],
+                'gemini':     ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+                'ollama':     ['llama4', 'llama3.3', 'qwen2.5-coder', 'mistral', 'codellama', 'deepseek-r1'],
+                'gemini-cli': ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'],
+                'claude-cli': ['claude-opus-4-6', 'claude-sonnet-4-6'],
+            };
+
+            function preselectProvider(key, currentModel) {
+                const needsKey = !NO_KEY_PROVIDERS.includes(key);
+                const hint = PROVIDER_HINTS[key] || null;
+                selectProvider(key, needsKey, hint, currentModel);
+            }
+
+            function populateSelect(selectEl, models, currentModel) {
+                selectEl.innerHTML = models.map(m =>
+                    `<option value="${m}"${m === currentModel ? ' selected' : ''}>${m}</option>`
+                ).join('');
+            }
+
+            function selectProvider(key, needsKey, hint, currentModel) {
+                selectedProvider = key;
+                providerNeedsKey = needsKey;
+                providerKeyHint = hint || '';
+                document.querySelectorAll('.provider-card').forEach(c => c.classList.remove('selected'));
+                const card = document.getElementById('pc-' + key);
+                if (card) card.classList.add('selected');
+
+                // Populate wizard model dropdown
+                const models = PROVIDER_MODELS[key] || [];
+                const wizardModelField = document.getElementById('wizard-model-field');
+                const wizardModelSelect = document.getElementById('wizard-model-select');
+                if (wizardModelSelect && models.length > 0) {
+                    populateSelect(wizardModelSelect, models, currentModel || models[0]);
+                    wizardModelField.style.display = 'block';
+                } else if (wizardModelField) {
+                    wizardModelField.style.display = 'none';
+                }
+
+                // Show/hide API key field
+                const apiField = document.getElementById('apikey-field');
+                const apiHint = document.getElementById('apikey-hint');
+                if (needsKey) {
+                    apiField.style.display = 'block';
+                    if (apiHint) {
+                        apiHint.textContent = hint
+                            ? 'Get your key at ' + hint + (isFirstTime ? '' : ' — leave blank to keep existing key')
+                            : (isFirstTime ? '' : 'Leave blank to keep existing key');
+                    }
+                } else {
+                    apiField.style.display = 'none';
+                    const apiInput = document.getElementById('api-key-input');
+                    if (apiInput) apiInput.value = '';
+                }
+                const setupBtn = document.getElementById('setup-btn');
+                if (setupBtn) setupBtn.disabled = false;
+            }
+
+            function populateSidebarModels(provider, currentModel) {
+                const sel = document.getElementById('model-select');
+                const overrideInput = document.getElementById('sidebar-model-override');
+                if (!sel) return;
+                const models = PROVIDER_MODELS[provider] || [];
+                if (models.length > 0) {
+                    const knownModel = models.includes(currentModel) ? currentModel : models[0];
+                    populateSelect(sel, models, knownModel);
+                    // If current model isn't in the known list, show it in the override field
+                    if (overrideInput && currentModel && !models.includes(currentModel)) {
+                        overrideInput.value = currentModel;
+                    }
+                } else if (currentModel) {
+                    sel.innerHTML = `<option value="${currentModel}" selected>${currentModel}</option>`;
+                }
+            }
+
+            async function onSidebarModelChange(newModel) {
+                const overrideInput = document.getElementById('sidebar-model-override');
+                if (overrideInput && overrideInput.value.trim()) return; // override takes precedence
+                if (!selectedProvider || !newModel) return;
+                await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: selectedProvider, model: newModel }),
+                }).catch(() => {});
+            }
+
+            async function onSidebarModelOverride(customModel) {
+                if (!selectedProvider) return;
+                const model = customModel.trim() || document.getElementById('model-select')?.value;
+                if (!model) return;
+                await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: selectedProvider, model }),
+                }).catch(() => {});
+            }
+
             function goStep(n) {
                 document.getElementById("wizard-error").style.display = "none";
-                document.getElementById("wizard-error-1").style.display =
-                    "none";
+                document.getElementById("wizard-error-1").style.display = "none";
                 if (currentStep === 0 && n === 1) {
-                    const userName = document
-                        .getElementById("user-name-input")
-                        .value.trim();
-                    const agentName = document
-                        .getElementById("agent-name-input")
-                        .value.trim();
+                    const userName = document.getElementById("user-name-input").value.trim();
+                    const agentName = document.getElementById("agent-name-input").value.trim();
                     if (!userName) {
                         const err = document.getElementById("wizard-error");
                         err.textContent = "Please enter your name.";
@@ -2956,9 +3099,7 @@
                         return;
                     }
                 }
-                document
-                    .querySelectorAll(".wizard-step")
-                    .forEach((s) => s.classList.remove("active"));
+                document.querySelectorAll(".wizard-step").forEach((s) => s.classList.remove("active"));
                 document.querySelectorAll(".dot").forEach((d, i) => {
                     d.classList.remove("active", "done");
                     if (i < n) d.classList.add("done");
@@ -2966,44 +3107,27 @@
                 });
                 document.getElementById(`step-${n}`).classList.add("active");
                 currentStep = n;
-                if (n === 1) updateApiKeyStep();
-            }
-
-            function updateApiKeyStep() {
-                const field = document.getElementById("apikey-field");
-                const title = document.getElementById("apikey-title");
-                const desc = document.getElementById("apikey-desc");
-                if (isFirstTime) {
-                    field.style.display = "block";
-                    title.textContent = "Enter your Anthropic API key";
-                    desc.textContent =
-                        "Your key is stored locally and sent only to Anthropic. You can add other providers later.";
-                    document.getElementById("apikey-hint").textContent =
-                        "Get your key at console.anthropic.com";
-                } else {
-                    field.style.display = "block";
-                    title.textContent = "Enter your Anthropic API key";
-                    desc.textContent =
-                        "Your key is stored locally and sent only to Anthropic.";
-                    document.getElementById("apikey-hint").textContent =
-                        "Get your key at console.anthropic.com";
+                // Refresh provider step when entering step 1 (isFirstTime may have changed)
+                if (n === 1 && selectedProvider) {
+                    const curModel = document.getElementById('wizard-model-select')?.value;
+                    selectProvider(selectedProvider, providerNeedsKey, providerKeyHint || null, curModel);
                 }
             }
 
             async function doSetup() {
                 const btn = document.getElementById("setup-btn");
                 const errEl = document.getElementById("wizard-error-1");
-                const apiKey = document
-                    .getElementById("api-key-input")
-                    .value.trim();
-                const userName = document
-                    .getElementById("user-name-input")
-                    .value.trim();
-                const agentName = document
-                    .getElementById("agent-name-input")
-                    .value.trim();
-                if (!apiKey) {
-                    errEl.textContent = "Please enter your Anthropic API key.";
+                const apiKey = document.getElementById("api-key-input").value.trim();
+                const userName = document.getElementById("user-name-input").value.trim();
+                const agentName = document.getElementById("agent-name-input").value.trim();
+
+                if (!selectedProvider) {
+                    errEl.textContent = "Please select a provider.";
+                    errEl.style.display = "block";
+                    return;
+                }
+                if (providerNeedsKey && !apiKey && isFirstTime) {
+                    errEl.textContent = "Please enter your API key.";
                     errEl.style.display = "block";
                     return;
                 }
@@ -3011,7 +3135,11 @@
                 btn.textContent = "Setting up...";
                 errEl.style.display = "none";
                 try {
-                    const body = { provider: "anthropic", api_key: apiKey };
+                    const wizardModelOverride = document.getElementById('wizard-model-override')?.value.trim();
+                    const wizardModel = wizardModelOverride || document.getElementById('wizard-model-select')?.value;
+                    const body = { provider: selectedProvider };
+                    if (apiKey) body.api_key = apiKey;
+                    if (wizardModel) body.model = wizardModel;
                     if (userName) body.user_name = userName;
                     if (agentName) body.agent_name = agentName;
                     const r = await fetch("/api/setup", {
@@ -3027,12 +3155,9 @@
                         isFirstTime = false;
                         if (agentName) updateAgentNameUI(agentName);
                         if (userName) updateUserProfile(userName);
-                        const model =
-                            data.model || data.provider || "anthropic";
-                        const modelLabel = document.getElementById(
-                            "sidebar-model-label",
-                        );
-                        if (modelLabel) modelLabel.textContent = model;
+                        populateSidebarModels(selectedProvider, wizardModel || null);
+                        const subtitle = document.getElementById("chat-subtitle");
+                        if (subtitle) subtitle.textContent = "Powered by " + selectedProvider;
                         goStep(2);
                     }
                 } catch (e) {
@@ -3045,11 +3170,9 @@
             }
 
             function updateAgentNameUI(name) {
-                const displayName =
-                    name && name.trim() ? name.trim() : "KrustyKlaw";
+                const displayName = name && name.trim() ? name.trim() : "KrustyKlaw";
                 document.title = displayName + " — KrustyKlaw";
-                const sidebarName =
-                    document.getElementById("sidebar-agent-name");
+                const sidebarName = document.getElementById("sidebar-agent-name");
                 if (sidebarName) sidebarName.textContent = displayName;
             }
 
@@ -3066,10 +3189,9 @@
                 if (apiInput) apiInput.value = "";
                 const err = document.getElementById("wizard-error-1");
                 if (err) err.style.display = "none";
-                document.getElementById("step-0-title").textContent =
-                    "Update your settings";
+                document.getElementById("step-0-title").textContent = "Update your settings";
                 document.getElementById("step-0-desc").textContent =
-                    "Update your name or agent name, then re-enter your Anthropic API key.";
+                    "Update your name, agent name, or switch providers.";
                 showScreen("setup");
                 goStep(0);
             }
@@ -3159,7 +3281,8 @@
                     const data = await r.json();
                     document.getElementById(typingId)?.remove();
                     if (data.error) {
-                        errEl.textContent = "Warning: " + data.error;
+                        const detail = data.detail ? ` — ${data.detail}` : '';
+                        errEl.textContent = "Warning: " + data.error + detail;
                         errEl.style.display = "block";
                         history.pop();
                     } else {
