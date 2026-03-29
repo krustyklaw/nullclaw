@@ -87,7 +87,7 @@ pub fn build(b: *std.Build) void {
             staticLib.linkSystemLibrary("webkit2gtk-4.1");
         },
         else => {
-            staticLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{ "-std=c++11", "-isystem", "/usr/include", "-D__time64_t=long", "-UPTHREAD_COND_INITIALIZER", "-DPTHREAD_COND_INITIALIZER={0}" } });
+            staticLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-std=c++11"} });
             staticLib.linkSystemLibrary("gtk+-3.0");
             staticLib.linkSystemLibrary("webkit2gtk-4.1");
         },
@@ -136,7 +136,7 @@ pub fn build(b: *std.Build) void {
             sharedLib.linkSystemLibrary("webkit2gtk-4.1");
         },
         else => {
-            sharedLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{ "-std=c++11", "-isystem", "/usr/include", "-D__time64_t=long", "-UPTHREAD_COND_INITIALIZER", "-DPTHREAD_COND_INITIALIZER={0}" } });
+            sharedLib.addCSourceFile(.{ .file = webview.path("core/src/webview.cc"), .flags = &.{"-std=c++11"} });
             sharedLib.linkSystemLibrary("gtk+-3.0");
             sharedLib.linkSystemLibrary("webkit2gtk-4.1");
         },

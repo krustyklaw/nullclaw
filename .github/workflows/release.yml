@@ -1,10 +1,5 @@
 name: Release
 
-env:
-  ANDROID_API_LEVEL: 24
-  ANDROID_NDK_VERSION: 29.0.14206865
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
   push:
     tags: ['v*.*']
@@ -15,151 +10,74 @@ jobs:
   build:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: linux-x86_64
             zig_target: x86_64-linux-gnu
-            zig_cpu: ""
           - os: macos-latest
             target: macos-aarch64
             zig_target: aarch64-macos
-            zig_cpu: ""
           - os: macos-latest
             target: macos-x86_64
             zig_target: x86_64-macos
-            zig_cpu: ""
           - os: windows-latest
             target: windows-x86_64
             zig_target: x86_64-windows
-            zig_cpu: ""
           - os: windows-latest
             target: windows-aarch64
             zig_target: aarch64-windows
-            zig_cpu: ""
 
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up Zig
-        uses: mlugg/setup-zig@v1
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v1
         with:
           version: "0.15.2"
 
-      - name: Install Linux Desktop Dependencies
-        if: startsWith(matrix.target, 'linux-')
+      - name: Dependencies (Linux)
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libx11-dev pkg-config
 
-      - name: Set macOS SDK root
-        if: startsWith(matrix.target, 'macos-')
-        run: echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
-
-      - name: Resolve build version
-        id: version
+      - name: Build
         run: |
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=dev" >> "$GITHUB_OUTPUT"
-          fi
+          zig build -Doptimize=ReleaseSmall -Dtarget=${{ matrix.zig_target }} -Dversion=${{ github.ref_name }}
 
-      - name: Build ReleaseSmall
-        run: |
-          zig_target="${{ matrix.zig_target }}"
-          zig_args=(
-            -Doptimize=ReleaseSmall
-            -Dtarget=${zig_target}
-            -Dversion=${{ steps.version.outputs.value }}
-          )
-          if [ -n "${{ matrix.zig_cpu }}" ]; then
-            zig_args+=(-Dcpu=${{ matrix.zig_cpu }})
-          fi
-          zig build "${zig_args[@]}"
-
-      # ── Linux: package as AppImage ────────────────────────────────────────
       - name: Package AppImage (Linux)
         if: matrix.target == 'linux-x86_64'
+        uses: miurahr/install-linuxdeploy-action@v1
+        with:
+          plugins: gtk
+      
+      - name: Create AppImage (Linux)
+        if: matrix.target == 'linux-x86_64'
         run: |
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh
-
           mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-          cp zig-out/bin/nullclaw AppDir/usr/bin/nullclaw
-          cp nullclaw.png AppDir/usr/share/icons/hicolor/256x256/apps/nullclaw.png
-
-          cat > AppDir/usr/share/applications/nullclaw.desktop <<'EOF'
-          [Desktop Entry]
-          Name=Nullclaw
-          Exec=nullclaw
-          Icon=nullclaw
-          Type=Application
-          Categories=Utility;AI;
-          EOF
-
-          DEPLOY_GTK_VERSION=3 ./linuxdeploy-x86_64.AppImage \
-            --appdir AppDir \
-            --plugin gtk \
-            --output appimage
-
+          cp zig-out/bin/nullclaw AppDir/usr/bin/
+          printf "[Desktop Entry]\nName=Nullclaw\nExec=nullclaw\nIcon=nullclaw\nType=Application\nCategories=Utility;AI;" > AppDir/nullclaw.desktop
+          cp nullclaw.png AppDir/nullclaw.png
+          DEPLOY_GTK_VERSION=3 linuxdeploy-x86_64.AppImage --appdir AppDir --plugin gtk --output appimage
           mv Nullclaw-*.AppImage nullclaw-linux-x86_64.AppImage
 
-      # ── macOS: package as .app bundle inside a .dmg ───────────────────────
-      - name: Package .app + .dmg (macOS)
+      - name: Package DMG (macOS)
         if: startsWith(matrix.target, 'macos-')
         run: |
-          APP="Nullclaw.app"
-          mkdir -p "$APP/Contents/MacOS"
-          mkdir -p "$APP/Contents/Resources"
-          cp zig-out/bin/nullclaw "$APP/Contents/MacOS/nullclaw"
+          mkdir -p "Nullclaw.app/Contents/MacOS"
+          cp zig-out/bin/nullclaw "Nullclaw.app/Contents/MacOS/"
+          hdiutil create -volname "Nullclaw" -srcfolder "Nullclaw.app" -ov -format UDZO nullclaw-${{ matrix.target }}.dmg
 
-          cat > "$APP/Contents/Info.plist" <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleExecutable</key>      <string>nullclaw</string>
-            <key>CFBundleIdentifier</key>      <string>com.nullclaw.nullclaw</string>
-            <key>CFBundleName</key>            <string>Nullclaw</string>
-            <key>CFBundleVersion</key>         <string>${{ steps.version.outputs.value }}</string>
-            <key>CFBundleShortVersionString</key><string>${{ steps.version.outputs.value }}</string>
-            <key>CFBundlePackageType</key>     <string>APPL</string>
-            <key>NSHighResolutionCapable</key> <true/>
-            <key>LSMinimumSystemVersion</key>  <string>12.0</string>
-          </dict>
-          </plist>
-          EOF
-
-          # Ad-hoc sign so Gatekeeper doesn't block it on first launch
-          codesign --force --deep --sign - "$APP"
-
-          # Wrap in a .dmg
-          hdiutil create \
-            -volname "Nullclaw" \
-            -srcfolder "$APP" \
-            -ov -format UDZO \
-            nullclaw-${{ matrix.target }}.dmg
-
-      # ── Windows: wrap in a self-extracting zip ────────────────────────────
-      # WebView2 is built into Windows 10/11 so the .exe runs as-is.
-      # We just rename it to something user-friendly.
-      - name: Rename Windows binary
+      - name: Rename (Windows)
         if: startsWith(matrix.target, 'windows-')
-        run: mv zig-out/bin/nullclaw.exe nullclaw-${{ matrix.target }}.exe
+        run: move zig-out\bin\nullclaw.exe nullclaw-${{ matrix.target }}.exe
+        shell: cmd
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
+      - name: Upload
+        uses: actions/upload-artifact@v4
         with:
-          name: nullclaw-${{ matrix.target }}
+          name: ${{ matrix.target }}
           path: |
             nullclaw-linux-x86_64.AppImage
             nullclaw-macos-*.dmg
@@ -167,25 +85,19 @@ jobs:
 
   release:
     needs: build
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || github.event_name == 'pull_request'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-
-      - name: Create release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || github.ref_name }}
-          prerelease: ${{ github.event_name == 'pull_request' }}
           files: |
             nullclaw-linux-x86_64.AppImage
-            nullclaw-macos-aarch64.dmg
-            nullclaw-macos-x86_64.dmg
-            nullclaw-windows-x86_64.exe
-            nullclaw-windows-aarch64.exe
+            nullclaw-macos-*.dmg
+            nullclaw-windows-*.exe
           generate_release_notes: true
