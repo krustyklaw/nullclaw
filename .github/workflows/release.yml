@@ -14,26 +14,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux — needs GTK3 + WebKitGTK system libraries
           - os: ubuntu-22.04
             target: linux-x86_64
-            zig_target: x86_64-linux-gnu
             pkg: tar
-
-          # macOS — needs WebKit.framework (ships with macOS SDK)
           - os: macos-latest
             target: macos-aarch64
-            zig_target: aarch64-macos
             pkg: dmg
           - os: macos-13
             target: macos-x86_64
-            zig_target: x86_64-macos
             pkg: dmg
-
-          # Windows — needs WebView2 headers (bundled by the webview dep)
           - os: windows-latest
             target: windows-x86_64
-            zig_target: x86_64-windows
             pkg: zip
 
     steps:
@@ -42,17 +33,17 @@ jobs:
         with:
           version: "0.15.2"
 
-      # Linux: install GTK3 and WebKitGTK dev headers for webview
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
+      # Do NOT pass -Dtarget — it disables system library discovery
+      # (pkg-config on Linux, framework search paths on macOS).
+      # Each runner is already the native arch for its target.
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall -Dtarget=${{ matrix.zig_target }} -Dversion=${{ github.ref_name }}
-
-      # --- Platform-specific packaging ---
+        run: zig build -Doptimize=ReleaseSmall -Dversion=${{ github.ref_name }}
 
       - name: Package tarball (Linux)
         if: matrix.pkg == 'tar'
