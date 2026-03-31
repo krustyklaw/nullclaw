@@ -7,97 +7,88 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-22.04
-            target: linux-x86_64
-            zig_target: x86_64-linux-gnu
-          - os: macos-latest
-            target: macos-aarch64
-            zig_target: aarch64-macos
-          - os: macos-latest
-            target: macos-x86_64
-            zig_target: x86_64-macos
-          - os: windows-latest
-            target: windows-x86_64
-            zig_target: x86_64-windows
-          - os: windows-latest
-            target: windows-aarch64
-            zig_target: aarch64-windows
+  build-and-release:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
+
       - uses: mlugg/setup-zig@v1
         with:
           version: "0.15.2"
 
-      - name: Dependencies (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+      # Only needed for the native Linux build's AppImage packaging
+      - name: Install Linux packaging dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libx11-dev pkg-config
 
-      - name: Build
+      - name: Cross-compile all targets
         run: |
-          zig build -Doptimize=ReleaseSmall -Dtarget=${{ matrix.zig_target }} -Dversion=${{ github.ref_name }}
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          declare -A TARGETS=(
+            [linux-x86_64]=x86_64-linux-gnu
+            [macos-aarch64]=aarch64-macos
+            [macos-x86_64]=x86_64-macos
+            [windows-x86_64]=x86_64-windows
+            [windows-aarch64]=aarch64-windows
+          )
 
-      - name: Package AppImage (Linux)
-        if: matrix.target == 'linux-x86_64'
+          for NAME in "${!TARGETS[@]}"; do
+            echo "::group::Building $NAME"
+            zig build -Doptimize=ReleaseSmall -Dtarget="${TARGETS[$NAME]}" -Dversion="$VERSION"
+
+            # Move artifacts to a flat staging dir
+            mkdir -p dist
+            if [[ "$NAME" == windows-* ]]; then
+              cp zig-out/bin/nullclaw.exe "dist/nullclaw-${NAME}.exe"
+            else
+              cp zig-out/bin/nullclaw "dist/nullclaw-${NAME}"
+            fi
+            echo "::endgroup::"
+          done
+
+      # --- Linux AppImage ---
+      - name: Package AppImage
         uses: miurahr/install-linuxdeploy-action@v1
         with:
           plugins: gtk
-      
-      - name: Create AppImage (Linux)
-        if: matrix.target == 'linux-x86_64'
+
+      - name: Create AppImage
         run: |
           mkdir -p AppDir/usr/bin
-          cp zig-out/bin/nullclaw AppDir/usr/bin/
+          cp dist/nullclaw-linux-x86_64 AppDir/usr/bin/nullclaw
+          chmod +x AppDir/usr/bin/nullclaw
           printf "[Desktop Entry]\nName=Nullclaw\nExec=nullclaw\nIcon=nullclaw\nType=Application\nCategories=Utility;AI;" > AppDir/nullclaw.desktop
           cp nullclaw.png AppDir/nullclaw.png
           DEPLOY_GTK_VERSION=3 linuxdeploy-x86_64.AppImage --appdir AppDir --plugin gtk --output appimage
-          mv Nullclaw-*.AppImage nullclaw-linux-x86_64.AppImage
+          mv Nullclaw-*.AppImage dist/nullclaw-linux-x86_64.AppImage
+          rm dist/nullclaw-linux-x86_64  # remove raw binary, AppImage replaces it
 
-      - name: Package DMG (macOS)
-        if: startsWith(matrix.target, 'macos-')
+      # --- macOS DMGs ---
+      # Note: hdiutil is macOS-only. On Linux, use genisoimage or just ship .tar.gz instead.
+      # This step creates simple .tar.gz archives as a cross-platform alternative.
+      - name: Package macOS archives
         run: |
-          mkdir -p "Nullclaw.app/Contents/MacOS"
-          cp zig-out/bin/nullclaw "Nullclaw.app/Contents/MacOS/"
-          hdiutil create -volname "Nullclaw" -srcfolder "Nullclaw.app" -ov -format UDZO nullclaw-${{ matrix.target }}.dmg
+          for ARCH in aarch64 x86_64; do
+            mkdir -p "Nullclaw-${ARCH}.app/Contents/MacOS"
+            cp "dist/nullclaw-macos-${ARCH}" "Nullclaw-${ARCH}.app/Contents/MacOS/nullclaw"
+            chmod +x "Nullclaw-${ARCH}.app/Contents/MacOS/nullclaw"
+            tar -czf "dist/nullclaw-macos-${ARCH}.tar.gz" "Nullclaw-${ARCH}.app"
+            rm "dist/nullclaw-macos-${ARCH}"  # remove raw binary
+          done
 
-      - name: Rename (Windows)
-        if: startsWith(matrix.target, 'windows-')
-        run: move zig-out\bin\nullclaw.exe nullclaw-${{ matrix.target }}.exe
-        shell: cmd
-
-      - name: Upload
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}
-          path: |
-            nullclaw-linux-x86_64.AppImage
-            nullclaw-macos-*.dmg
-            nullclaw-windows-*.exe
+          name: all-platforms
+          path: dist/
 
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-      - name: Create Release
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            nullclaw-linux-x86_64.AppImage
-            nullclaw-macos-*.dmg
-            nullclaw-windows-*.exe
+          files: dist/*
           generate_release_notes: true
