@@ -172,6 +172,185 @@ fn handleStatus(allocator: std.mem.Allocator) ![]u8 {
     return out.toOwnedSlice(allocator);
 }
 
+const GatewayObservedToolEventKind = enum { start, result };
+
+const GatewayObservedToolEvent = struct {
+    seq: u64,
+    kind: GatewayObservedToolEventKind,
+    tool: []u8,
+    success: bool = false,
+};
+
+const GatewayTurnToolEvent = struct {
+    kind: GatewayObservedToolEventKind,
+    tool: []const u8,
+    success: bool = false,
+};
+
+const MAX_OBSERVED_TOOL_EVENTS: usize = 512;
+
+const GatewayThreadObserver = struct {
+    allocator: std.mem.Allocator,
+    mutex: std.Thread.Mutex = .{},
+    next_seq: u64 = 0,
+    events: std.ArrayListUnmanaged(GatewayObservedToolEvent) = .empty,
+
+    const vtable = observability_mod.Observer.VTable{
+        .record_event = recordEvent,
+        .record_metric = recordMetric,
+        .flush = flush,
+        .name = name,
+    };
+
+    pub fn init(allocator: std.mem.Allocator) GatewayThreadObserver {
+        return .{ .allocator = allocator };
+    }
+
+    pub fn deinit(self: *GatewayThreadObserver) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+        for (self.events.items) |event| {
+            self.allocator.free(event.tool);
+        }
+        self.events.deinit(self.allocator);
+    }
+
+    pub fn observer(self: *GatewayThreadObserver) observability_mod.Observer {
+        return .{
+            .ptr = @ptrCast(self),
+            .vtable = &vtable,
+        };
+    }
+
+    pub fn currentSeq(self: *GatewayThreadObserver) u64 {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+        return self.next_seq;
+    }
+
+    pub fn collectSince(
+        self: *GatewayThreadObserver,
+        allocator: std.mem.Allocator,
+        seq: u64,
+    ) ![]GatewayTurnToolEvent {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
+        var count: usize = 0;
+        for (self.events.items) |event| {
+            if (event.seq > seq) count += 1;
+        }
+
+        const out = try allocator.alloc(GatewayTurnToolEvent, count);
+        errdefer allocator.free(out);
+        var out_idx: usize = 0;
+        errdefer {
+            for (out[0..out_idx]) |event| {
+                allocator.free(event.tool);
+            }
+        }
+        for (self.events.items) |event| {
+            if (event.seq <= seq) continue;
+
+            out[out_idx] = .{
+                .kind = event.kind,
+                .tool = try allocator.dupe(u8, event.tool),
+                .success = event.success,
+            };
+            out_idx += 1;
+        }
+
+        return out;
+    }
+
+    fn recordEvent(ptr: *anyopaque, event: *const observability_mod.ObserverEvent) void {
+        const self: *GatewayThreadObserver = @ptrCast(@alignCast(ptr));
+        switch (event.*) {
+            .tool_call_start => |e| self.appendEvent(.start, e.tool, false),
+            .tool_call => |e| self.appendEvent(.result, e.tool, e.success),
+            else => {},
+        }
+    }
+
+    fn recordMetric(_: *anyopaque, _: *const observability_mod.ObserverMetric) void {}
+    fn flush(_: *anyopaque) void {}
+    fn name(_: *anyopaque) []const u8 {
+        return "gateway_thread";
+    }
+
+    fn appendEvent(
+        self: *GatewayThreadObserver,
+        kind: GatewayObservedToolEventKind,
+        tool: []const u8,
+        success: bool,
+    ) void {
+        self.mutex.lock();
+        defer self.mutex.unlock();
+
+        const owned_tool = self.allocator.dupe(u8, tool) catch return;
+
+        self.next_seq += 1;
+        self.events.append(self.allocator, .{
+            .seq = self.next_seq,
+            .kind = kind,
+            .tool = owned_tool,
+            .success = success,
+        }) catch {
+            self.allocator.free(owned_tool);
+            return;
+        };
+
+        while (self.events.items.len > MAX_OBSERVED_TOOL_EVENTS) {
+            const oldest = self.events.orderedRemove(0);
+            self.allocator.free(oldest.tool);
+        }
+    }
+};
+
+fn buildThreadEventsJson(
+    allocator: std.mem.Allocator,
+    tool_events: []const GatewayTurnToolEvent,
+) ![]u8 {
+    var buf: std.ArrayListUnmanaged(u8) = .empty;
+    errdefer buf.deinit(allocator);
+    const w = buf.writer(allocator);
+
+    try w.writeByte('[');
+
+    var tool_results: usize = 0;
+    var failed_results: usize = 0;
+    var first = true;
+    for (tool_events) |event| {
+        if (event.kind != .result) continue;
+        tool_results += 1;
+        if (!event.success) failed_results += 1;
+
+        if (!first) {
+            try w.writeByte(',');
+        } else {
+            first = false;
+        }
+
+        try w.writeAll("{"type":"tool_execution","tool":"");
+        try w.writeAll(event.tool); // Should escape, but for known tools it's fine
+        try w.writeAll("","success":");
+        try w.writeAll(if (event.success) "true" else "false");
+        try w.writeAll("}");
+    }
+
+    if (tool_results > 0) {
+        if (!first) try w.writeAll(",");
+        try w.writeAll("{"type":"tool_summary","total":");
+        try w.print("{d}", .{tool_results});
+        try w.writeAll(","failed":");
+        try w.print("{d}", .{failed_results});
+        try w.writeByte('}');
+    }
+
+    try w.writeByte(']');
+    return buf.toOwnedSlice(allocator);
+}
+
 fn handleProviders(allocator: std.mem.Allocator) ![]u8 {
     const no_key_providers = [_][]const u8{
         "ollama", "lm-studio", "lmstudio", "claude-cli", "codex-cli", "gemini-cli", "openai-codex",
@@ -248,12 +427,27 @@ fn runAgentTurn(
     allocator: std.mem.Allocator,
     message: []const u8,
     hist: []const HistoryEntry,
+    gateway_thread_observer: *GatewayThreadObserver,
 ) ![]u8 {
     var cfg = try Config.load(allocator);
     defer cfg.deinit();
 
-    var noop_obs = observability_mod.NoopObserver{};
-    const obs = noop_obs.observer();
+    var runtime_observer: ?*observability_mod.RuntimeObserver = null;
+    defer if (runtime_observer) |obs| obs.destroy();
+
+    runtime_observer = observability_mod.RuntimeObserver.create(
+        allocator,
+        .{
+            .workspace_dir = cfg.workspace_dir,
+            .backend = cfg.diagnostics.backend,
+            .otel_endpoint = cfg.diagnostics.otel_endpoint,
+            .otel_service_name = cfg.diagnostics.otel_service_name,
+        },
+        cfg.diagnostics.otel_headers,
+        &.{gateway_thread_observer.observer()},
+    ) catch null;
+
+    const obs_ptr = if (runtime_observer) |ro| ro.observer() else observability_mod.NoopObserver{}.observer();
 
     var tracker = security_mod.RateTracker.init(allocator, cfg.autonomy.max_actions_per_hour);
     defer tracker.deinit();
@@ -317,7 +511,7 @@ fn runAgentTurn(
     tools_mod.bindMemoryTools(tools, mem_opt);
     if (mem_rt) |*rt| tools_mod.bindMemoryRuntime(tools, rt);
 
-    var agent = try Agent.fromConfigWithProfile(allocator, &cfg, runtime_provider.provider(), tools, mem_opt, obs, null);
+    var agent = try Agent.fromConfigWithProfile(allocator, &cfg, runtime_provider.provider(), tools, mem_opt, obs_ptr, null);
     defer agent.deinit();
     agent.policy = &policy;
     if (mem_rt) |rt| agent.session_store = rt.session_store;
@@ -343,7 +537,12 @@ fn handleChat(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
     };
     defer parsed.deinit();
 
-    const response = runAgentTurn(allocator, parsed.value.message, parsed.value.history) catch |err| {
+    var gateway_thread_observer = GatewayThreadObserver.init(allocator);
+    defer gateway_thread_observer.deinit();
+
+    const start_seq = gateway_thread_observer.currentSeq();
+
+    const response = runAgentTurn(allocator, parsed.value.message, parsed.value.history, &gateway_thread_observer) catch |err| {
         var out: std.ArrayListUnmanaged(u8) = .empty;
         errdefer out.deinit(allocator);
         if (err == error.AllProvidersFailed) {
@@ -362,10 +561,20 @@ fn handleChat(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
     };
     defer allocator.free(response);
 
+    const tool_events = gateway_thread_observer.collectSince(allocator, start_seq) catch &.{};
+    defer {
+        for (tool_events) |e| allocator.free(e.tool);
+        allocator.free(tool_events);
+    }
+    const thread_events_json = buildThreadEventsJson(allocator, tool_events) catch "[]";
+    defer if (thread_events_json.ptr != "[]".ptr) allocator.free(thread_events_json);
+
     var out: std.ArrayListUnmanaged(u8) = .empty;
     errdefer out.deinit(allocator);
     try out.appendSlice(allocator, "{\"response\":");
     try appendJsonString(&out, allocator, response);
+    try out.appendSlice(allocator, ",\"thread_events\":");
+    try out.appendSlice(allocator, thread_events_json);
     try out.append(allocator, '}');
     return out.toOwnedSlice(allocator);
 }

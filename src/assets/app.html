@@ -3289,6 +3289,19 @@
                         const response = data.response || "";
                         appendMessage("ai", response);
                         history.push({ role: "assistant", content: response });
+
+                        if (data.thread_events && data.thread_events.length > 0) {
+                            const tool_execs = data.thread_events.filter(e => e.type === 'tool_execution');
+                            if (tool_execs.length > 0) {
+                                const tool_list = tool_execs.map(e => e.tool).join(', ');
+                                const toolHtml = `<div style="font-size:11px;color:var(--text2);margin-top:4px;">Uses tools: ${tool_list}</div>`;
+                                const msgs = document.getElementById("messages");
+                                const lastBubble = msgs.lastElementChild.querySelector('.message-bubble');
+                                if (lastBubble) {
+                                    lastBubble.insertAdjacentHTML('beforeend', toolHtml);
+                                }
+                            }
+                        }
                     }
                 } catch (e) {
                     document.getElementById(typingId)?.remove();
@@ -3555,7 +3568,15 @@
                     clearInterval(stepInterval);
                     const data = await r.json();
                     if (data.error) throw new Error(data.error);
-                    const content = data.response || "";
+                    let content = data.response || "";
+
+                    if (data.thread_events && data.thread_events.length > 0) {
+                        const tool_execs = data.thread_events.filter(e => e.type === "tool_execution");
+                        if (tool_execs.length > 0) {
+                            const query_list = tool_execs.map(e => `- ${e.tool}`).join('\n');
+                            content = content + '\n\n## Tool Executions\n\n' + query_list;
+                        }
+                    }
                     const doc = {
                         id: "doc_" + Date.now(),
                         title: topic,
@@ -3847,6 +3868,14 @@
                         );
                     else {
                         addLogEntry("ok", `"${task.name}" completed`);
+                        if (data.thread_events && data.thread_events.length > 0) {
+                            const tool_execs = data.thread_events.filter(e => e.type === "tool_execution");
+                            if (tool_execs.length > 0) {
+                                for (const exec of tool_execs) {
+                                    addLogEntry("ok", `Tool: ${exec.tool}`);
+                                }
+                            }
+                        }
                         const doc = {
                             id: "doc_" + Date.now(),
                             title: `[Scheduled] ${task.name}`,
