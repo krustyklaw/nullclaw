@@ -16,72 +16,76 @@ jobs:
         include:
           - os: ubuntu-22.04
             target: linux-x86_64
-            zig_target: x86_64-linux-gnu
+            pkg: tar
           - os: macos-latest
             target: macos-aarch64
-            zig_target: aarch64-macos
-          - os: macos-latest
-            target: macos-x86_64
-            zig_target: x86_64-macos
+            pkg: dmg
           - os: windows-latest
             target: windows-x86_64
-            zig_target: x86_64-windows
-          - os: windows-latest
-            target: windows-aarch64
-            zig_target: aarch64-windows
+            pkg: zip
 
     steps:
       - uses: actions/checkout@v4
-      - uses: mlugg/setup-zig@v1
+      - uses: mlugg/setup-zig@v2
         with:
           version: "0.15.2"
 
-      - name: Dependencies (Linux)
-        if: matrix.os == 'ubuntu-22.04'
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libx11-dev pkg-config
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
+      # Do NOT pass -Dtarget — it disables system library discovery
+      # (pkg-config on Linux, framework search paths on macOS).
+      # Each runner is already the native arch for its target.
       - name: Build
-        run: |
-          zig build -Doptimize=ReleaseSmall -Dtarget=${{ matrix.zig_target }} -Dversion=${{ github.ref_name }}
+        run: zig build -Doptimize=ReleaseSmall -Dversion=${{ github.ref_name }}
 
-      - name: Package AppImage (Linux)
-        if: matrix.target == 'linux-x86_64'
-        uses: miurahr/install-linuxdeploy-action@v1
-        with:
-          plugins: gtk
-      
-      - name: Create AppImage (Linux)
-        if: matrix.target == 'linux-x86_64'
+      - name: Package tarball (Linux)
+        if: matrix.pkg == 'tar'
         run: |
-          mkdir -p AppDir/usr/bin
-          cp zig-out/bin/nullclaw AppDir/usr/bin/
-          printf "[Desktop Entry]\nName=Nullclaw\nExec=nullclaw\nIcon=nullclaw\nType=Application\nCategories=Utility;AI;" > AppDir/nullclaw.desktop
-          cp nullclaw.png AppDir/nullclaw.png
-          DEPLOY_GTK_VERSION=3 linuxdeploy-x86_64.AppImage --appdir AppDir --plugin gtk --output appimage
-          mv Nullclaw-*.AppImage nullclaw-linux-x86_64.AppImage
+          chmod +x zig-out/bin/krustyklaw
+          tar -czf krustyklaw-${{ matrix.target }}.tar.gz -C zig-out/bin krustyklaw
 
       - name: Package DMG (macOS)
-        if: startsWith(matrix.target, 'macos-')
+        if: matrix.pkg == 'dmg'
         run: |
-          mkdir -p "Nullclaw.app/Contents/MacOS"
-          cp zig-out/bin/nullclaw "Nullclaw.app/Contents/MacOS/"
-          hdiutil create -volname "Nullclaw" -srcfolder "Nullclaw.app" -ov -format UDZO nullclaw-${{ matrix.target }}.dmg
+          mkdir -p "KrustyKlaw.app/Contents/MacOS"
+          cp zig-out/bin/krustyklaw "KrustyKlaw.app/Contents/MacOS/"
+          chmod +x "KrustyKlaw.app/Contents/MacOS/krustyklaw"
+          cat > "KrustyKlaw.app/Contents/Info.plist" << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>krustyklaw</string>
+            <key>CFBundleName</key>
+            <string>KrustyKlaw</string>
+            <key>CFBundleIdentifier</key>
+            <string>io.nullclaw.krustyklaw</string>
+            <key>CFBundleVersion</key>
+            <string>${{ github.ref_name }}</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+          hdiutil create -volname "KrustyKlaw" -srcfolder "KrustyKlaw.app" -ov -format UDZO krustyklaw-${{ matrix.target }}.dmg
 
-      - name: Rename (Windows)
-        if: startsWith(matrix.target, 'windows-')
-        run: move zig-out\bin\nullclaw.exe nullclaw-${{ matrix.target }}.exe
-        shell: cmd
+      - name: Package zip (Windows)
+        if: matrix.pkg == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path zig-out/bin/krustyklaw.exe -DestinationPath krustyklaw-${{ matrix.target }}.zip
 
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
           path: |
-            nullclaw-linux-x86_64.AppImage
-            nullclaw-macos-*.dmg
-            nullclaw-windows-*.exe
+            krustyklaw-*.tar.gz
+            krustyklaw-*.dmg
+            krustyklaw-*.zip
 
   release:
     needs: build
@@ -92,12 +96,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          path: dist
           merge-multiple: true
-      - name: Create Release
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums-sha256.txt
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            nullclaw-linux-x86_64.AppImage
-            nullclaw-macos-*.dmg
-            nullclaw-windows-*.exe
+          files: dist/*
           generate_release_notes: true
