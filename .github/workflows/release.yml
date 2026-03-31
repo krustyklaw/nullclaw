@@ -17,19 +17,16 @@ jobs:
 
       - uses: mlugg/setup-zig@v1
         with:
-          version: "0.15.2"
-
-      # Only needed for the native Linux build's AppImage packaging
-      - name: Install Linux packaging dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libx11-dev pkg-config
+          version: "0.15.1"
 
       - name: Cross-compile all targets
         run: |
           VERSION="${GITHUB_REF_NAME:-dev}"
+          mkdir -p dist
+
           declare -A TARGETS=(
             [linux-x86_64]=x86_64-linux-gnu
+            [linux-aarch64]=aarch64-linux-gnu
             [macos-aarch64]=aarch64-macos
             [macos-x86_64]=x86_64-macos
             [windows-x86_64]=x86_64-windows
@@ -40,8 +37,6 @@ jobs:
             echo "::group::Building $NAME"
             zig build -Doptimize=ReleaseSmall -Dtarget="${TARGETS[$NAME]}" -Dversion="$VERSION"
 
-            # Move artifacts to a flat staging dir
-            mkdir -p dist
             if [[ "$NAME" == windows-* ]]; then
               cp zig-out/bin/nullclaw.exe "dist/nullclaw-${NAME}.exe"
             else
@@ -50,35 +45,29 @@ jobs:
             echo "::endgroup::"
           done
 
-      # --- Linux AppImage ---
-      - name: Package AppImage
-        uses: miurahr/install-linuxdeploy-action@v1
-        with:
-          plugins: gtk
-
-      - name: Create AppImage
+      - name: Create tarballs (Linux + macOS)
         run: |
-          mkdir -p AppDir/usr/bin
-          cp dist/nullclaw-linux-x86_64 AppDir/usr/bin/nullclaw
-          chmod +x AppDir/usr/bin/nullclaw
-          printf "[Desktop Entry]\nName=Nullclaw\nExec=nullclaw\nIcon=nullclaw\nType=Application\nCategories=Utility;AI;" > AppDir/nullclaw.desktop
-          cp nullclaw.png AppDir/nullclaw.png
-          DEPLOY_GTK_VERSION=3 linuxdeploy-x86_64.AppImage --appdir AppDir --plugin gtk --output appimage
-          mv Nullclaw-*.AppImage dist/nullclaw-linux-x86_64.AppImage
-          rm dist/nullclaw-linux-x86_64  # remove raw binary, AppImage replaces it
-
-      # --- macOS DMGs ---
-      # Note: hdiutil is macOS-only. On Linux, use genisoimage or just ship .tar.gz instead.
-      # This step creates simple .tar.gz archives as a cross-platform alternative.
-      - name: Package macOS archives
-        run: |
-          for ARCH in aarch64 x86_64; do
-            mkdir -p "Nullclaw-${ARCH}.app/Contents/MacOS"
-            cp "dist/nullclaw-macos-${ARCH}" "Nullclaw-${ARCH}.app/Contents/MacOS/nullclaw"
-            chmod +x "Nullclaw-${ARCH}.app/Contents/MacOS/nullclaw"
-            tar -czf "dist/nullclaw-macos-${ARCH}.tar.gz" "Nullclaw-${ARCH}.app"
-            rm "dist/nullclaw-macos-${ARCH}"  # remove raw binary
+          cd dist
+          for f in nullclaw-linux-* nullclaw-macos-*; do
+            [ -f "$f" ] || continue
+            chmod +x "$f"
+            tar -czf "${f}.tar.gz" "$f"
+            rm "$f"
           done
+
+      - name: Create zip archives (Windows)
+        run: |
+          cd dist
+          for f in nullclaw-windows-*.exe; do
+            [ -f "$f" ] || continue
+            zip "${f%.exe}.zip" "$f"
+            rm "$f"
+          done
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > checksums-sha256.txt
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
