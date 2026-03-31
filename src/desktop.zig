@@ -447,7 +447,8 @@ fn runAgentTurn(
         &.{gateway_thread_observer.observer()},
     ) catch null;
 
-    const obs_ptr = if (runtime_observer) |ro| ro.observer() else observability_mod.NoopObserver{}.observer();
+    var noop_obs = observability_mod.NoopObserver{};
+    const obs_ptr = if (runtime_observer) |ro| ro.observer() else noop_obs.observer();
 
     var tracker = security_mod.RateTracker.init(allocator, cfg.autonomy.max_actions_per_hour);
     defer tracker.deinit();
