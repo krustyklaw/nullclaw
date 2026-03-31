@@ -331,18 +331,18 @@ fn buildThreadEventsJson(
             first = false;
         }
 
-        try w.writeAll("{"type":"tool_execution","tool":"");
+        try w.writeAll("{\"type\":\"tool_execution\",\"tool\":\"");
         try w.writeAll(event.tool); // Should escape, but for known tools it's fine
-        try w.writeAll("","success":");
+        try w.writeAll("\",\"success\":");
         try w.writeAll(if (event.success) "true" else "false");
         try w.writeAll("}");
     }
 
     if (tool_results > 0) {
         if (!first) try w.writeAll(",");
-        try w.writeAll("{"type":"tool_summary","total":");
+        try w.writeAll("{\"type\":\"tool_summary\",\"total\":");
         try w.print("{d}", .{tool_results});
-        try w.writeAll(","failed":");
+        try w.writeAll(",\"failed\":");
         try w.print("{d}", .{failed_results});
         try w.writeByte('}');
     }
