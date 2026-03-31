@@ -15,9 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mlugg/setup-zig@v1
+      # v2 handles the new tarball naming (zig-x86_64-linux vs zig-linux-x86_64)
+      # and resolves version from build.zig.zon if omitted.
+      # Pin to 0.15.2 to match upstream nullclaw's required Zig version.
+      - uses: mlugg/setup-zig@v2
         with:
-          version: "0.15.1"
+          version: "0.15.2"
 
       - name: Cross-compile all targets
         run: |
