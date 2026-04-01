@@ -13,7 +13,11 @@
       "Bash(cp:*)",
       "Bash(grep -n \"__time64_t\\\\|__int64_t\" ~/.cache/zig/p/webview-0.1.0-*/build.zig)",
       "Bash(find /home/shiham/Desktop/nullclaw -path */websocket*build.zig.zon)",
-      "Bash(find /c/Users/natha/Desktop/nullclaw -type f -name *.md -path */memory*)"
+      "Bash(find /c/Users/natha/Desktop/nullclaw -type f -name *.md -path */memory*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(magick --version)",
+      "Bash(python:*)"
     ]
   }
 }

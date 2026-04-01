@@ -111,6 +111,7 @@ pub fn build(b: *std.Build) void {
     // opens only the WebView GUI with no terminal.
     if (target.result.os.tag == .windows) {
         exe.subsystem = .Windows;
+        exe.addWin32ResourceFile(.{ .file = b.path("src/assets/windows.rc") });
     }
 
     b.installArtifact(exe);

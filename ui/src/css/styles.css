@@ -1749,3 +1749,251 @@
                 height: 15px;
                 flex-shrink: 0;
             }
+
+            /* ClawHub Skills */
+            .clawhub-container {
+                padding: 0 32px 32px;
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 32px;
+                background: var(--bg2);
+            }
+
+            .search-section {
+                padding-top: 8px;
+            }
+
+            .search-input-group {
+                display: flex;
+                gap: 12px;
+            }
+
+            .search-input-group input {
+                flex: 1;
+                background: var(--bg);
+                height: 48px;
+                border: 1px solid var(--border);
+                border-radius: 24px;
+                padding: 0 24px;
+                font-size: 15px;
+                color: var(--text);
+                outline: none;
+                transition: border-color 0.15s, box-shadow 0.15s;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            }
+
+            .search-input-group input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px var(--accent-light);
+            }
+
+            .search-input-group .btn {
+                width: auto;
+                height: 48px;
+                border-radius: 24px;
+                padding: 0 32px;
+                font-size: 15px;
+            }
+
+            .skills-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 16px;
+                min-height: 120px;
+            }
+
+            .skills-grid.mini {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            }
+
+            .skill-card {
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            }
+
+            .skill-card:hover {
+                border-color: var(--accent);
+                transform: translateY(-2px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+            }
+
+            .skill-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+
+            .skill-name {
+                font-size: 16px;
+                font-weight: 700;
+                color: var(--text);
+            }
+
+            .skill-slug {
+                font-size: 11px;
+                font-family: 'JetBrains Mono', monospace;
+                color: var(--text2);
+                background: var(--bg2);
+                padding: 2px 6px;
+                border-radius: 4px;
+                display: inline-block;
+                margin-top: 2px;
+            }
+
+            .skill-desc {
+                font-size: 13px;
+                color: var(--text2);
+                line-height: 1.5;
+                flex: 1;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .skill-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-top: 8px;
+                gap: 8px;
+            }
+
+            .skill-meta {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 12px;
+                color: var(--text3);
+                font-weight: 500;
+            }
+
+            .skill-meta span {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .skill-meta i {
+                color: var(--accent);
+                opacity: 0.8;
+            }
+
+            .skill-btn {
+                width: auto !important;
+                padding: 8px 16px !important;
+                font-size: 12px !important;
+                height: 32px !important;
+            }
+
+            .skill-btn.install {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            .skill-btn.install:hover {
+                background: var(--accent2);
+            }
+
+            .skill-btn.installed {
+                background: var(--success);
+                color: #fff;
+                pointer-events: none;
+            }
+
+            .skill-btn.remove {
+                background: var(--bg2);
+                color: var(--error);
+                border: 1px solid var(--border);
+            }
+
+            .skill-btn.remove:hover {
+                border-color: var(--error);
+                background: rgba(224, 90, 90, 0.05);
+            }
+
+            .installed-section {
+                border-top: 1px solid var(--border);
+                margin-top: 16px;
+                padding-top: 32px;
+                margin-bottom: 32px;
+            }
+
+            .section-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 24px;
+            }
+
+            .section-header h3 {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--text);
+            }
+
+            .badge {
+                background: var(--accent-light);
+                color: var(--accent);
+                padding: 2px 10px;
+                border-radius: 12px;
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            .loading-state {
+                text-align: center;
+                padding: 64px;
+                color: var(--text2);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                background: var(--bg);
+                border-radius: var(--radius);
+                border: 1px dashed var(--border);
+            }
+
+            .spinner {
+                width: 40px;
+                height: 40px;
+                border: 3px solid var(--accent-light);
+                border-top-color: var(--accent);
+                border-radius: 50%;
+                animation: spin 0.8s linear infinite;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .empty-state {
+                grid-column: 1/-1;
+                text-align: center;
+                padding: 80px 32px;
+                color: var(--text2);
+                font-size: 14px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                background: var(--bg);
+                border-radius: var(--radius);
+                border: 1px dashed var(--border);
+            }
+
+            .empty-state .icon {
+                font-size: 48px;
+                opacity: 0.3;
+            }

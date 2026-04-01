@@ -1,0 +1,4 @@
+// Windows resource script — embeds the application icon into the EXE.
+// Resource ID 1 is the conventional main application icon (used by Explorer
+// and the taskbar when no other icon is specified for the window class).
+1 ICON "icon.ico"

@@ -23,6 +23,8 @@ const security_mod = @import("security/policy.zig");
 const subagent_mod = @import("subagent.zig");
 const subagent_runner_mod = @import("subagent_runner.zig");
 const Agent = @import("agent/root.zig").Agent;
+const skills_mod = @import("skills.zig");
+const skillforge_mod = @import("skillforge.zig");
 
 const HTML = @embedFile("assets/app.html");
 
@@ -580,6 +582,118 @@ fn handleChat(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
     return out.toOwnedSlice(allocator);
 }
 
+fn handleSkillsList(allocator: std.mem.Allocator) ![]u8 {
+    var cfg = try Config.load(allocator);
+    defer cfg.deinit();
+
+    const skills = try skills_mod.listSkills(allocator, cfg.workspace_dir);
+    defer skills_mod.freeSkills(allocator, skills);
+
+    var out: std.ArrayListUnmanaged(u8) = .empty;
+    errdefer out.deinit(allocator);
+
+    try out.append(allocator, '[');
+    for (skills, 0..) |skill, i| {
+        if (i > 0) try out.append(allocator, ',');
+        try out.appendSlice(allocator, "{\"name\":");
+        try appendJsonString(&out, allocator, skill.name);
+        try out.appendSlice(allocator, ",\"version\":");
+        try appendJsonString(&out, allocator, skill.version);
+        try out.appendSlice(allocator, ",\"description\":");
+        try appendJsonString(&out, allocator, skill.description);
+        try out.append(allocator, '}');
+    }
+    try out.append(allocator, ']');
+
+    return out.toOwnedSlice(allocator);
+}
+
+fn handleClawHubSearch(allocator: std.mem.Allocator, query: []const u8) ![]u8 {
+    // Search GitHub for skills with "openclaw" or "krustyklaw" topic
+    var candidates = try skillforge_mod.scout(allocator, query);
+    defer {
+        for (candidates.items) |c| {
+            allocator.free(c.result_name);
+            allocator.free(c.repo_url);
+            allocator.free(c.description);
+            if (c.language) |l| allocator.free(l);
+            allocator.free(c.owner);
+        }
+        candidates.deinit(allocator);
+    }
+
+    var out: std.ArrayListUnmanaged(u8) = .empty;
+    errdefer out.deinit(allocator);
+
+    try out.append(allocator, '[');
+    for (candidates.items, 0..) |c, i| {
+        if (i > 0) try out.append(allocator, ',');
+        try out.appendSlice(allocator, "{\"name\":");
+        try appendJsonString(&out, allocator, c.result_name);
+        try out.appendSlice(allocator, ",\"id\":");
+        try appendJsonString(&out, allocator, c.result_name);
+        try out.appendSlice(allocator, ",\"description\":");
+        try appendJsonString(&out, allocator, c.description);
+        try out.appendSlice(allocator, ",\"author\":");
+        try appendJsonString(&out, allocator, c.owner);
+        try out.appendSlice(allocator, ",\"stars\":");
+        try out.print(allocator, "{d}", .{c.stars});
+        try out.appendSlice(allocator, ",\"url\":");
+        try appendJsonString(&out, allocator, c.repo_url);
+        try out.append(allocator, '}');
+    }
+    try out.append(allocator, ']');
+
+    return out.toOwnedSlice(allocator);
+}
+
+fn handleClawHubInstall(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
+    const Req = struct { source: []const u8 };
+    const parsed = std.json.parseFromSlice(Req, allocator, body, .{ .ignore_unknown_fields = true }) catch return allocator.dupe(u8, "{\"error\":\"invalid json\"}");
+    defer parsed.deinit();
+
+    var cfg = try Config.load(allocator);
+    defer cfg.deinit();
+
+    var detail: ?[]u8 = null;
+    defer if (detail) |d| allocator.free(d);
+
+    skills_mod.installSkillWithDetail(allocator, parsed.value.source, cfg.workspace_dir, &detail) catch |err| {
+        var out: std.ArrayListUnmanaged(u8) = .empty;
+        try out.appendSlice(allocator, "{\"error\":");
+        try appendJsonString(&out, allocator, if (detail) |d| d else @errorName(err));
+        try out.append(allocator, '}');
+        return out.toOwnedSlice(allocator);
+    };
+
+    return allocator.dupe(u8, "{\"status\":\"ok\"}");
+}
+
+fn handleClawHubRemove(allocator: std.mem.Allocator, body: []const u8) ![]u8 {
+    const Req = struct { name: []const u8 };
+    const parsed = std.json.parseFromSlice(Req, allocator, body, .{ .ignore_unknown_fields = true }) catch return allocator.dupe(u8, "{\"error\":\"invalid json\"}");
+    defer parsed.deinit();
+
+    var cfg = try Config.load(allocator);
+    defer cfg.deinit();
+
+    try skills_mod.removeSkill(allocator, parsed.value.name, cfg.workspace_dir);
+
+    return allocator.dupe(u8, "{\"status\":\"ok\"}");
+}
+
+fn getQueryParam(url: []const u8, name: []const u8) ?[]const u8 {
+    const qmark = std.mem.indexOfScalar(u8, url, '?') orelse return null;
+    const query = url[qmark + 1 ..];
+    var it = std.mem.splitScalar(u8, query, '&');
+    while (it.next()) |pair| {
+        if (std.mem.startsWith(u8, pair, name) and pair.len > name.len and pair[name.len] == '=') {
+            return pair[name.len + 1 ..];
+        }
+    }
+    return null;
+}
+
 // ── Request dispatch ────────────────────────────────────────────
 
 fn dispatch(allocator: std.mem.Allocator, stream: *std.net.Stream, raw: []const u8) void {
@@ -629,6 +743,37 @@ fn dispatch(allocator: std.mem.Allocator, stream: *std.net.Stream, raw: []const 
     if (is_post and std.mem.eql(u8, path, "/api/chat")) {
         const req_body = extractBody(raw) orelse "";
         const resp = handleChat(allocator, req_body) catch return writeJson(stream, "500 Internal Server Error", "{\"error\":\"internal\"}");
+        defer allocator.free(resp);
+        writeJson(stream, "200 OK", resp);
+        return;
+    }
+
+    if (is_get and std.mem.eql(u8, path, "/api/skills/list")) {
+        const body = handleSkillsList(allocator) catch return writeJson(stream, "500 Internal Server Error", "{\"error\":\"internal\"}");
+        defer allocator.free(body);
+        writeJson(stream, "200 OK", body);
+        return;
+    }
+
+    if (is_get and std.mem.eql(u8, path, "/api/clawhub/search")) {
+        const query = getQueryParam(target, "q") orelse "";
+        const body = handleClawHubSearch(allocator, query) catch return writeJson(stream, "500 Internal Server Error", "{\"error\":\"internal\"}");
+        defer allocator.free(body);
+        writeJson(stream, "200 OK", body);
+        return;
+    }
+
+    if (is_post and std.mem.eql(u8, path, "/api/clawhub/install")) {
+        const req_body = extractBody(raw) orelse "";
+        const resp = handleClawHubInstall(allocator, req_body) catch return writeJson(stream, "500 Internal Server Error", "{\"error\":\"internal\"}");
+        defer allocator.free(resp);
+        writeJson(stream, "200 OK", resp);
+        return;
+    }
+
+    if (is_post and std.mem.eql(u8, path, "/api/clawhub/remove")) {
+        const req_body = extractBody(raw) orelse "";
+        const resp = handleClawHubRemove(allocator, req_body) catch return writeJson(stream, "500 Internal Server Error", "{\"error\":\"internal\"}");
         defer allocator.free(resp);
         writeJson(stream, "200 OK", resp);
         return;
