@@ -1,0 +1,23 @@
+install
++- install krustyklaw
+   +- compile exe krustyklaw Debug native 1 errors
+src\desktop.zig:628:46: error: member function expected 1 argument(s), found 0
+    const stdout_content = try child.stdout.?.reader().readAllAlloc(allocator, 10 * 1024 * 1024);
+                               ~~~~~~~~~~~~~~^~~~~~~
+C:\Users\natha\AppData\Local\Microsoft\WinGet\Packages\zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe\zig-x86_64-windows-0.15.2\lib\std\fs\File.zig:2105:5: note: function declared here
+pub fn reader(file: File, buffer: []u8) Reader {
+~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+referenced by:
+    dispatch: src\desktop.zig:803:41
+    serverLoop: src\desktop.zig:841:17
+    10 reference(s) hidden; use '-freference-trace=12' to see all references
+error: the following command failed with 1 compilation errors:
+"C:\\Users\\natha\\AppData\\Local\\Microsoft\\WinGet\\Packages\\zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe\\zig-x86_64-windows-0.15.2\\zig.exe" build-exe ".zig-cache\\o\\efce46ea75fda573b32f7446e57d157f\\webviewStatic.lib" ".zig-cache\\o\\838591ccab944f2bedcac32a83af7b24\\sqlite3.lib" -ODebug -I ".zig-cache\\o\\a6fb089e932f705ef1065695b36c6e90" -I ".zig-cache\\o\\33f2724296868462ac0b0ace80cc9b2c" --dep krustyklaw --dep build_options --dep webview "-Mroot=C:\\Users\\natha\\Desktop\\nullclaw\\src\\main.zig" ".zig-cache\\o\\838591ccab944f2bedcac32a83af7b24\\sqlite3.lib" ".zig-cache\\o\\efce46ea75fda573b32f7446e57d157f\\webviewStatic.lib" ".zig-cache\\o\\734541765c4e716c6d7bcf07037cc967\\wasm3.lib" -ODebug -I ".zig-cache\\o\\33f2724296868462ac0b0ace80cc9b2c" -I ".zig-cache\\o\\a6fb089e932f705ef1065695b36c6e90" -I "C:\\Users\\natha\\AppData\\Local\\zig\\p\\wasm3-0.5.1-hrMdNS09BQAWSU0TI6mVS8KfW4hxexjFvyOQINgphwKu\\source" -I ".zig-cache\\o\\a6fb089e932f705ef1065695b36c6e90" --dep build_options --dep websocket --dep webview "-Mkrustyklaw=C:\\Users\\natha\\Desktop\\nullclaw\\src\\root.zig" "-Mbuild_options=.zig-cache\\c\\30a5ce5c9e2c1dab7c2d45df7b5ebabf\\options.zig" --dep webviewRaw "-Mwebview=C:\\Users\\natha\\Desktop\\nullclaw\\vendor\\webview\\src\\webview.zig" -ODebug --dep build "-Mwebsocket=C:\\Users\\natha\\AppData\\Local\\zig\\p\\websocket-0.1.0-ZPISdXp4AwB5_c0jHAA9mZXqJFuOC_dtpVRRFPBbRaNO\\src\\websocket.zig" -ODebug "-MwebviewRaw=.zig-cache\\o\\202de6cd7aaf88fdaf4ce661793d2f4b\\webview.zig" "-Mbuild=.zig-cache\\c\\9df3ebb56e512146581134c82a20886e\\options.zig" -lole32 -lshlwapi -lversion -ladvapi32 -lshell32 -luser32 -lc++ -lc --cache-dir .zig-cache --global-cache-dir "C:\\Users\\natha\\AppData\\Local\\zig" --name krustyklaw -dynamic --zig-lib-dir "C:\\Users\\natha\\AppData\\Local\\Microsoft\\WinGet\\Packages\\zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe\\zig-x86_64-windows-0.15.2\\lib\\" --subsystem windows --listen=-
+
+Build Summary: 9/12 steps succeeded; 1 failed
+install transitive failure
++- install krustyklaw transitive failure
+   +- compile exe krustyklaw Debug native 1 errors
+
+error: the following build command failed with exit code 1:
+.zig-cache\o\513b5dd680b05dc990a94aa08f948248\build.exe C:\Users\natha\AppData\Local\Microsoft\WinGet\Packages\zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe\zig-x86_64-windows-0.15.2\zig.exe C:\Users\natha\AppData\Local\Microsoft\WinGet\Packages\zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe\zig-x86_64-windows-0.15.2\lib C:\Users\natha\Desktop\nullclaw .zig-cache C:\Users\natha\AppData\Local\zig --seed 0xcd2f6e23 -Z145331ca45686779

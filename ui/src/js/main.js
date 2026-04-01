@@ -23,7 +23,14 @@ window.showNewTaskForm = showNewTaskForm;
 window.addSource = addSource;
 window.saveTask = saveTask;
 window.resetTaskForm = resetTaskForm;
+window.searchClawHub = searchClawHub;
+window.installSkill = installSkill;
+window.removeSkill = removeSkill;
+window.loadInstalledSkills = loadInstalledSkills;
 window.toggleTask = toggleTask;
+window.searchClawHub = searchClawHub;
+window.installSkill = installSkill;
+window.removeSkill = removeSkill;
             // State
             let currentStep = 0;
             let isFirstTime = false;
@@ -158,7 +165,11 @@ window.toggleTask = toggleTask;
                 document
                     .querySelectorAll(".feature-screen")
                     .forEach((s) => s.classList.remove("active"));
-                document.getElementById("fs-" + name).classList.add("active");
+                const target = document.getElementById("fs-" + name);
+                if (target) target.classList.add("active");
+                if (name === "clawhub") {
+                    loadInstalledSkills();
+                }
             }
 
             // Setup
@@ -845,7 +856,8 @@ window.toggleTask = toggleTask;
             }
 
             function escHtml(s) {
-                return s
+                if (s == null) return "";
+                return String(s)
                     .replace(/&/g, "&amp;")
                     .replace(/</g, "&lt;")
                     .replace(/>/g, "&gt;")
@@ -1112,6 +1124,156 @@ window.toggleTask = toggleTask;
                     log.innerHTML = "";
                 log.appendChild(entry);
                 log.scrollTop = log.scrollHeight;
+            }
+
+            // ClawHub Integration
+            async function searchClawHub() {
+                const input = document.getElementById("clawhub-search-input");
+                if (!input) return;
+                const query = input.value.trim();
+                if (!query) return;
+
+                const resultsEl = document.getElementById("clawhub-results");
+                const loadingEl = document.getElementById("clawhub-results-loading");
+                
+                resultsEl.innerHTML = "";
+                loadingEl.style.display = "flex";
+
+                try {
+                    const r = await fetch(`https://clawhub.ai/api/search?q=${encodeURIComponent(query)}`);
+                    const responseJson = await r.json();
+                    const data = responseJson.results || [];
+                    loadingEl.style.display = "none";
+
+                    if (!data || data.length === 0) {
+                        resultsEl.innerHTML = `
+                            <div class="empty-state">
+                                <div class="icon">🏜️</div>
+                                <div>No skills found for "${escHtml(query)}". Try a different search.</div>
+                            </div>`;
+                        return;
+                    }
+
+                    resultsEl.innerHTML = data.map(skill => {
+                        const slug = skill.slug || skill.id || "";
+                        const displayName = skill.displayName || skill.name || slug;
+                        const summary = skill.summary || skill.description || "No description provided.";
+                        const author = skill.author || "Community";
+                        
+                        return `
+                        <div class="skill-card">
+                            <div class="skill-header">
+                                <div class="skill-name">
+                                    <a href="https://clawhub.ai/skills/${escHtml(slug)}" target="_blank" style="color: inherit; text-decoration: none;">
+                                        ${escHtml(displayName)}
+                                    </a>
+                                </div>
+                                <div class="skill-slug">
+                                    <a href="https://clawhub.ai/skills/${escHtml(slug)}" target="_blank" style="color: var(--text-secondary); text-decoration: underline;">
+                                        ${escHtml(slug)}
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="skill-desc">${escHtml(summary)}</div>
+                            <div class="skill-footer">
+                                <div class="skill-meta">
+                                    <span>👤 ${escHtml(author)}</span>
+                                    ${skill.stars ? `<span>⭐ ${skill.stars}</span>` : ""}
+                                </div>
+                                <button class="btn btn-primary skill-btn install" id="btn-install-${slug}" onclick="window.installSkill('${slug}')">Install</button>
+                            </div>
+                        </div>
+                    `}).join("");
+
+                } catch (e) {
+                    loadingEl.style.display = "none";
+                    resultsEl.innerHTML = `<div class="error-msg" style="display:block">Search failed: ${e.message}</div>`;
+                }
+            }
+
+            async function installSkill(source) {
+                const btnId = "btn-install-" + (source.split("/").pop());
+                const btn = document.getElementById(btnId);
+                const oldText = btn ? btn.textContent : "Install";
+                
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = "Installing...";
+                }
+
+                try {
+                    const r = await fetch("/api/clawhub/install", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ source })
+                    });
+                    const res = await r.json();
+                    
+                    if (res.error) throw new Error(res.error);
+
+                    if (btn) {
+                        btn.textContent = "Installed";
+                        btn.className = "btn skill-btn installed";
+                    }
+                    
+                    loadInstalledSkills();
+                } catch (e) {
+                    alert("Installation failed: " + e.message);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = oldText;
+                    }
+                }
+            }
+
+            async function removeSkill(name) {
+                if (!confirm(`Are you sure you want to remove the skill "${name}"?`)) return;
+
+                try {
+                    const r = await fetch("/api/clawhub/remove", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name })
+                    });
+                    const res = await r.json();
+                    if (res.error) throw new Error(res.error);
+                    loadInstalledSkills();
+                } catch (e) {
+                    alert("Failed to remove skill: " + e.message);
+                }
+            }
+
+            async function loadInstalledSkills() {
+                const countEl = document.getElementById("installed-count");
+                const gridEl = document.getElementById("installed-skills");
+
+                try {
+                    const r = await fetch("/api/skills/list");
+                    if (!r.ok) return;
+                    const data = await r.json();
+                    
+                    if (countEl) countEl.textContent = data.length;
+                    
+                    if (!data || data.length === 0) {
+                        if (gridEl) gridEl.innerHTML = `<div style="font-size:12px;color:var(--text2);padding:16px;">No skills installed in workspace.</div>`;
+                        return;
+                    }
+
+                    if (gridEl) {
+                        gridEl.innerHTML = data.map(skill => `
+                            <div class="skill-card mini">
+                                <div class="skill-name">${escHtml(skill.name)}</div>
+                                <div class="skill-desc" style="-webkit-line-clamp:2">${escHtml(skill.description || "")}</div>
+                                <div class="skill-footer">
+                                    <div class="skill-meta">v${escHtml(skill.version || "0.0.1")}</div>
+                                    <button class="btn skill-btn remove" onclick="window.removeSkill('${skill.name}')">Remove</button>
+                                </div>
+                            </div>
+                        `).join("");
+                    }
+                } catch (e) {
+                    console.error("Failed to load installed skills:", e);
+                }
             }
 
             // Start
