@@ -25,3 +25,8 @@ config.signal.json
 .cursor/
 .trae/
 .codebuddy/
+node_modules/
+zig-x86_64-linux-*/
+*.tar.xz
+*.py
+*.patch
