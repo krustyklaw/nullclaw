@@ -45,14 +45,38 @@ jobs:
       - name: Package tarball (Linux)
         if: matrix.pkg == 'tar'
         run: |
-          chmod +x zig-out/bin/krustyklaw
-          tar -czf krustyklaw-${{ matrix.target }}.tar.gz -C zig-out/bin krustyklaw
+          python3 scripts/gen_icons.py --png krustyklaw.png --size 256
+          cat > krustyklaw.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Name=KrustyKlaw
+          Comment=The AI that actually does things
+          Exec=krustyklaw
+          Icon=krustyklaw
+          Type=Application
+          Categories=Utility;
+          DESKTOP
+          mkdir -p pkg/bin \
+                   pkg/share/applications \
+                   pkg/share/icons/hicolor/256x256/apps
+          cp zig-out/bin/krustyklaw pkg/bin/krustyklaw
+          chmod +x pkg/bin/krustyklaw
+          cp krustyklaw.desktop pkg/share/applications/krustyklaw.desktop
+          cp krustyklaw.png     pkg/share/icons/hicolor/256x256/apps/krustyklaw.png
+          tar -czf krustyklaw-${{ matrix.target }}.tar.gz -C pkg .
+
+      - name: Build app icon (macOS)
+        if: matrix.pkg == 'dmg'
+        run: |
+          python3 scripts/gen_icons.py --iconset AppIcon.iconset
+          iconutil -c icns AppIcon.iconset -o AppIcon.icns
 
       - name: Package DMG (macOS)
         if: matrix.pkg == 'dmg'
         run: |
-          mkdir -p "KrustyKlaw.app/Contents/MacOS"
+          mkdir -p "KrustyKlaw.app/Contents/MacOS" \
+                   "KrustyKlaw.app/Contents/Resources"
           cp zig-out/bin/krustyklaw "KrustyKlaw.app/Contents/MacOS/"
+          cp AppIcon.icns "KrustyKlaw.app/Contents/Resources/"
           chmod +x "KrustyKlaw.app/Contents/MacOS/krustyklaw"
           cat > "KrustyKlaw.app/Contents/Info.plist" << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -69,6 +93,8 @@ jobs:
             <string>${{ github.ref_name }}</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
+            <key>CFBundleIconFile</key>
+            <string>AppIcon</string>
           </dict>
           </plist>
           EOF

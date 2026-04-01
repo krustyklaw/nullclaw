@@ -24,6 +24,9 @@ window.addSource = addSource;
 window.saveTask = saveTask;
 window.resetTaskForm = resetTaskForm;
 window.toggleTask = toggleTask;
+window.searchClawHub = searchClawHub;
+window.installSkill = installSkill;
+window.removeSkill = removeSkill;
             // State
             let currentStep = 0;
             let isFirstTime = false;
@@ -158,7 +161,11 @@ window.toggleTask = toggleTask;
                 document
                     .querySelectorAll(".feature-screen")
                     .forEach((s) => s.classList.remove("active"));
-                document.getElementById("fs-" + name).classList.add("active");
+                const fs = document.getElementById("fs-" + name);
+                if (fs) fs.classList.add("active");
+                if (name === "clawhub") {
+                    loadInstalledSkills();
+                }
             }
 
             // Setup
