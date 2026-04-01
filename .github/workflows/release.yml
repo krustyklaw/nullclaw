@@ -94,6 +94,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -109,3 +111,23 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+      - name: Push binaries to binaries branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout --orphan binaries
+          git rm -rf .
+
+          mv dist/* .
+
+          git lfs install
+          git lfs track "*.tar.gz"
+          git lfs track "*.dmg"
+          git lfs track "*.zip"
+          git lfs track "*.exe"
+
+          git add .
+          git commit -m "Update release binaries for ${{ github.ref_name }}" || true
+          git push --force origin HEAD:binaries
