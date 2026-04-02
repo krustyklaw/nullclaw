@@ -115,10 +115,10 @@ pub const DiagnosticsConfig = struct {
     api_error_max_chars: ?u32 = null,
     /// Emit info logs for every executed tool call (name/id/duration/success).
     /// Arguments and tool output are never logged.
-    log_tool_calls: bool = false,
+    log_tool_calls: bool = true,
     /// Emit info logs when a user message is received by SessionManager.
     /// Only metadata is logged (channel/session hash/message size), not content.
-    log_message_receipts: bool = false,
+    log_message_receipts: bool = true,
     /// Emit full inbound/outbound user-visible message payloads.
     /// Intended for local debugging only (can include sensitive text).
     log_message_payloads: bool = false,
@@ -137,10 +137,10 @@ pub const DiagnosticsConfig = struct {
 };
 
 pub const AutonomyConfig = struct {
-    level: AutonomyLevel = .supervised,
+    level: AutonomyLevel = .full,
     workspace_only: bool = true,
-    max_actions_per_hour: u32 = 20,
-    require_approval_for_medium_risk: bool = true,
+    max_actions_per_hour: u32 = 200,
+    require_approval_for_medium_risk: bool = false,
     block_high_risk_commands: bool = true,
     allowed_commands: []const []const u8 = &.{},
     /// When true, skip the single-`&` shell-operator check so that bare
@@ -217,10 +217,10 @@ pub const ToolFilterGroup = struct {
 };
 
 pub const AgentConfig = struct {
-    compact_context: bool = false,
+    compact_context: bool = true,
     max_tool_iterations: u32 = 1000,
-    max_history_messages: u32 = 100,
-    parallel_tools: bool = false,
+    max_history_messages: u32 = 200,
+    parallel_tools: bool = true,
     tool_dispatcher: []const u8 = "auto",
     token_limit: u64 = DEFAULT_AGENT_TOKEN_LIMIT,
     /// Internal parse marker: true only when token_limit is explicitly set in config.
@@ -272,7 +272,7 @@ pub const AgentConfig = struct {
 };
 
 pub const ToolsConfig = struct {
-    shell_timeout_secs: u64 = 60,
+    shell_timeout_secs: u64 = 300,
     shell_max_output_bytes: u32 = 1_048_576, // 1MB
     max_file_size_bytes: u32 = 10_485_760, // 10MB — shared file_read/edit/append
     web_fetch_max_chars: u32 = 100_000,
@@ -309,12 +309,12 @@ pub const ModelRouteConfig = struct {
 };
 
 pub const HeartbeatConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     interval_minutes: u32 = 30,
 };
 
 pub const CronConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     interval_minutes: u32 = 30,
     max_run_history: u32 = 50,
 };
@@ -1195,12 +1195,12 @@ pub const MemoryHybridConfig = struct {
 };
 
 pub const MemoryMmrConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     lambda: f64 = 0.7,
 };
 
 pub const MemoryTemporalDecayConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     half_life_days: u32 = 30,
 };
 
@@ -1221,7 +1221,7 @@ pub const MemoryLifecycleConfig = struct {
 };
 
 pub const MemoryResponseCacheConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     ttl_minutes: u32 = 60,
     max_entries: u32 = 5_000,
 };
@@ -1273,8 +1273,8 @@ pub const MemoryClickHouseConfig = struct {
 };
 
 pub const MemoryRetrievalStagesConfig = struct {
-    query_expansion_enabled: bool = false,
-    adaptive_retrieval_enabled: bool = false,
+    query_expansion_enabled: bool = true,
+    adaptive_retrieval_enabled: bool = true,
     adaptive_keyword_max_tokens: u32 = 3,
     adaptive_vector_min_tokens: u32 = 6,
     llm_reranker_enabled: bool = false,
@@ -1283,7 +1283,7 @@ pub const MemoryRetrievalStagesConfig = struct {
 };
 
 pub const MemorySummarizerConfig = struct {
-    enabled: bool = false,
+    enabled: bool = true,
     window_size_tokens: u32 = 4000,
     summary_max_tokens: u32 = 500,
     auto_extract_semantic: bool = true,
@@ -1723,10 +1723,10 @@ test "security defaults enable web tools" {
     try std.testing.expect(diagnostics.api_error_max_chars == null);
 
     const autonomy = AutonomyConfig{};
-    try std.testing.expectEqual(AutonomyLevel.supervised, autonomy.level);
+    try std.testing.expectEqual(AutonomyLevel.full, autonomy.level);
     try std.testing.expect(autonomy.workspace_only);
-    try std.testing.expectEqual(@as(u32, 20), autonomy.max_actions_per_hour);
-    try std.testing.expect(autonomy.require_approval_for_medium_risk);
+    try std.testing.expectEqual(@as(u32, 200), autonomy.max_actions_per_hour);
+    try std.testing.expect(!autonomy.require_approval_for_medium_risk);
     try std.testing.expect(autonomy.block_high_risk_commands);
     try std.testing.expect(!autonomy.allow_raw_url_chars);
 

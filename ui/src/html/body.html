@@ -189,9 +189,7 @@
                             />
                         </svg>
                     </div>
-                    <span class="sidebar-brand" id="sidebar-agent-name"
-                        >KrustyKlaw</span
-                    >
+                    <span class="sidebar-brand" id="sidebar-agent-name"></span>
                     <button
                         class="sidebar-collapse-btn"
                         title="Collapse sidebar"
@@ -225,6 +223,22 @@
 
                     <div class="config-section" style="margin-bottom: 24px">
                         <div class="config-section-title">Navigation</div>
+                        <button
+                            class="nav-item"
+                            onclick="showFeature('chat')"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Chat
+                        </button>
                         <button
                             class="nav-item"
                             onclick="showFeature('research')"
@@ -372,10 +386,8 @@
                             id="user-profile-badge"
                             onclick="toggleUserMenu()"
                         >
-                            <div class="user-avatar" id="user-avatar">N</div>
-                            <span class="user-name" id="user-display-name"
-                                >Nathan</span
-                            >
+                            <div class="user-avatar" id="user-avatar"></div>
+                            <span class="user-name" id="user-display-name"></span>
                             <span class="user-caret">&#9652;</span>
                         </div>
                     </div>
@@ -524,6 +536,9 @@
                 <!-- Use Cases -->
                 <div class="feature-screen" id="fs-usecases">
                     <div class="page-header">
+                        <button class="back-btn" onclick="showFeature('chat')" title="Back to chat">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
                         <span class="page-title">Use Cases</span>
                         <span class="page-subtitle"
                             >Step-by-step guides to unlock KrustyKlaw's
@@ -842,6 +857,9 @@
                 <!-- Deep Research -->
                 <div class="feature-screen" id="fs-research">
                     <div class="page-header">
+                        <button class="back-btn" onclick="showFeature('chat')" title="Back to chat">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
                         <span class="page-title">Deep Research</span>
                         <span class="page-subtitle"
                             >AI-powered research &rarr; formatted Markdown
@@ -947,6 +965,9 @@
                 <!-- Scheduled Analysis -->
                 <div class="feature-screen" id="fs-scheduler">
                     <div class="page-header">
+                        <button class="back-btn" onclick="showFeature('chat')" title="Back to chat">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
                         <span class="page-title">Scheduled Analysis</span>
                         <span class="page-subtitle"
                             >Automate AI tasks on a schedule</span
@@ -1089,13 +1110,23 @@
                 <!-- ClawHub -->
                 <div class="feature-screen" id="fs-clawhub">
                     <div class="main-header">
+                        <button class="back-btn" onclick="showFeature('chat')" title="Back to chat">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
                         <div class="main-header-left">
                             <div class="main-title">ClawHub</div>
                             <div class="main-subtitle">Discover and install skills from the community registry</div>
                         </div>
                     </div>
 
-                    <div class="clawhub-container">
+                    <!-- Tab bar -->
+                    <div class="clawhub-tabs">
+                        <button class="clawhub-tab active" id="ch-tab-browse" onclick="switchClawHubTab('browse')">Browse</button>
+                        <button class="clawhub-tab" id="ch-tab-installed" onclick="switchClawHubTab('installed')">Installed <span id="installed-count" class="badge">0</span></button>
+                    </div>
+
+                    <!-- Browse tab -->
+                    <div class="clawhub-pane" id="ch-pane-browse">
                         <div class="search-section">
                             <div class="search-input-group">
                                 <input type="text" id="clawhub-search-input" placeholder="Search skills (e.g. gmail, calendar, postgres)..." onkeyup="if(event.key==='Enter')window.searchClawHub()" />
@@ -1114,14 +1145,11 @@
                                 <div>Search for a skill to begin. Try "gmail" or "coding".</div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="installed-section">
-                            <div class="section-header">
-                                <h3>Installed Skills</h3>
-                                <div class="badge" id="installed-count">0</div>
-                            </div>
-                            <div id="installed-skills" class="skills-grid mini">
-                            </div>
+                    <!-- Installed tab -->
+                    <div class="clawhub-pane" id="ch-pane-installed" style="display:none">
+                        <div id="installed-skills" class="skills-grid">
                         </div>
                     </div>
                 </div>

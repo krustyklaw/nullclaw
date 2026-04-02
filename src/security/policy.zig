@@ -54,13 +54,14 @@ const high_risk_commands = [_][]const u8{
     "rm",       "mkfs",         "dd",     "shutdown", "reboot", "halt",
     "poweroff", "sudo",         "su",     "chown",    "chmod",  "useradd",
     "userdel",  "usermod",      "passwd", "mount",    "umount", "iptables",
-    "ufw",      "firewall-cmd", "curl",   "wget",     "nc",     "ncat",
+    "ufw",      "firewall-cmd", "nc",      "ncat",
     "netcat",   "scp",          "ssh",    "ftp",      "telnet",
 };
 
 /// Default allowed commands
 pub const default_allowed_commands = [_][]const u8{
     "git", "npm", "cargo", "ls", "cat", "grep", "find", "echo", "pwd", "wc", "head", "tail",
+    "curl", "wget",
 };
 
 pub const full_autonomy_default_allowed_commands = [_][]const u8{"*"};
@@ -520,6 +521,7 @@ fn classifyMedium(base: []const u8, first_arg_raw: ?[]const u8) bool {
     {
         return true;
     }
+    if (std.mem.eql(u8, base, "curl") or std.mem.eql(u8, base, "wget")) return true;
     return false;
 }
 
@@ -816,10 +818,17 @@ test "blocked commands basic" {
     const p = SecurityPolicy{};
     try std.testing.expect(!p.isCommandAllowed("rm -rf /"));
     try std.testing.expect(!p.isCommandAllowed("sudo apt install"));
-    try std.testing.expect(!p.isCommandAllowed("curl http://evil.com"));
-    try std.testing.expect(!p.isCommandAllowed("wget http://evil.com"));
     try std.testing.expect(!p.isCommandAllowed("python3 exploit.py"));
     try std.testing.expect(!p.isCommandAllowed("node malicious.js"));
+    // curl and wget are allowed (medium risk) — gated by approval in supervised mode
+    try std.testing.expect(p.isCommandAllowed("curl https://example.com"));
+    try std.testing.expect(p.isCommandAllowed("wget https://example.com"));
+}
+
+test "curl and wget are medium risk" {
+    const p = SecurityPolicy{};
+    try std.testing.expectEqual(CommandRiskLevel.medium, p.commandRiskLevel("curl https://api.example.com/data"));
+    try std.testing.expectEqual(CommandRiskLevel.medium, p.commandRiskLevel("wget https://example.com/file.tar.gz"));
 }
 
 test "readonly blocks all commands" {
@@ -845,7 +854,7 @@ test "command with pipes validates all segments" {
     const p = SecurityPolicy{};
     try std.testing.expect(p.isCommandAllowed("ls | grep foo"));
     try std.testing.expect(p.isCommandAllowed("cat file.txt | wc -l"));
-    try std.testing.expect(!p.isCommandAllowed("ls | curl http://evil.com"));
+    try std.testing.expect(p.isCommandAllowed("ls | curl https://example.com"));
     try std.testing.expect(!p.isCommandAllowed("echo hello | python3 -"));
 }
 
@@ -1068,8 +1077,9 @@ test "high risk commands list" {
     try std.testing.expectEqual(CommandRiskLevel.high, p.commandRiskLevel("dd if=/dev/zero of=/dev/sda"));
     try std.testing.expectEqual(CommandRiskLevel.high, p.commandRiskLevel("shutdown now"));
     try std.testing.expectEqual(CommandRiskLevel.high, p.commandRiskLevel("reboot"));
-    try std.testing.expectEqual(CommandRiskLevel.high, p.commandRiskLevel("curl http://evil.com"));
-    try std.testing.expectEqual(CommandRiskLevel.high, p.commandRiskLevel("wget http://evil.com"));
+    // curl/wget are medium risk (allowed but require approval in supervised mode)
+    try std.testing.expectEqual(CommandRiskLevel.medium, p.commandRiskLevel("curl http://evil.com"));
+    try std.testing.expectEqual(CommandRiskLevel.medium, p.commandRiskLevel("wget http://evil.com"));
 }
 
 test "medium risk git commands" {
@@ -1252,7 +1262,11 @@ test "wildcard allowlist still honors high-risk runtime gate" {
         .allowed_commands = &.{"*"},
         .block_high_risk_commands = true,
     };
-    try std.testing.expectError(error.HighRiskBlocked, p.validateCommandExecution("curl https://example.com", false));
+    // curl is medium risk now — passes even with block_high_risk_commands enabled
+    const risk = try p.validateCommandExecution("curl https://example.com", false);
+    try std.testing.expectEqual(CommandRiskLevel.medium, risk);
+    // ssh is still high risk and should be blocked
+    try std.testing.expectError(error.HighRiskBlocked, p.validateCommandExecution("ssh user@host", false));
 }
 
 test "wildcard allowlist with surrounding whitespace permits arbitrary commands" {
@@ -1290,20 +1304,14 @@ test "allowlist command-star entries still enforce command-specific arg safety" 
 }
 
 test "allowlist command-star entry reaches high-risk runtime gate" {
-    var blocked = SecurityPolicy{
+    // curl is now medium risk — block_high_risk_commands does not affect it
+    var p = SecurityPolicy{
         .autonomy = .full,
         .allowed_commands = &.{"curl *"},
         .block_high_risk_commands = true,
     };
-    try std.testing.expectError(error.HighRiskBlocked, blocked.validateCommandExecution("curl https://example.com", false));
-
-    var unblocked = SecurityPolicy{
-        .autonomy = .full,
-        .allowed_commands = &.{"curl *"},
-        .block_high_risk_commands = false,
-    };
-    const risk = try unblocked.validateCommandExecution("curl https://example.com", false);
-    try std.testing.expectEqual(CommandRiskLevel.high, risk);
+    const risk = try p.validateCommandExecution("curl https://example.com", false);
+    try std.testing.expectEqual(CommandRiskLevel.medium, risk);
 }
 
 test "containsSingleAmpersand detects correctly" {
@@ -1621,9 +1629,9 @@ test "full autonomy wildcard end-to-end: validateCommandExecution passes" {
         .block_high_risk_commands = false,
         .require_approval_for_medium_risk = false,
     };
-    // High-risk commands pass with full autonomy + wildcard + block_high_risk disabled
+    // curl is medium risk — passes with full autonomy + wildcard
     const risk = try p.validateCommandExecution("curl https://example.com", false);
-    try std.testing.expectEqual(CommandRiskLevel.high, risk);
+    try std.testing.expectEqual(CommandRiskLevel.medium, risk);
 
     // Medium-risk commands pass
     const risk2 = try p.validateCommandExecution("npm install express", false);

@@ -193,7 +193,17 @@ pub const ShellTool = struct {
         for (SAFE_ENV_VARS) |key| {
             if (platform.getEnvOrNull(allocator, key)) |val| {
                 defer allocator.free(val);
-                try env.put(key, val);
+                // Prepend <workspace>/.tools/bin to PATH so skill-installed
+                // binaries are found without any user configuration.
+                if (std.mem.eql(u8, key, "PATH") and builtin.os.tag != .windows) {
+                    const tools_bin = try std.fmt.allocPrint(allocator, "{s}/.tools/bin", .{self.workspace_dir});
+                    defer allocator.free(tools_bin);
+                    const augmented = try std.fmt.allocPrint(allocator, "{s}{c}{s}", .{ tools_bin, path_list_delimiter, val });
+                    defer allocator.free(augmented);
+                    try env.put(key, augmented);
+                } else {
+                    try env.put(key, val);
+                }
             }
         }
 

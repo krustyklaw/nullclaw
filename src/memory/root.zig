@@ -1722,7 +1722,10 @@ test "initRuntime none deinit does not leak" {
 test "initRuntime none has null db_path" {
     try requireBackendEnabledForTests("none");
 
-    var rt = initRuntime(std.testing.allocator, &.{ .backend = "none" }, "/tmp") orelse
+    var cfg: config_types.MemoryConfig = .{ .backend = "none" };
+    cfg.response_cache.enabled = false;
+
+    var rt = initRuntime(std.testing.allocator, &cfg, "/tmp") orelse
         return error.TestUnexpectedResult;
     defer rt.deinit();
 

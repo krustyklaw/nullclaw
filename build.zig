@@ -115,6 +115,30 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
+    // Test step
+    const unit_tests = b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/root.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+    unit_tests.root_module.addImport("build_options", options_mod);
+    unit_tests.linkLibrary(sqlite3_lib);
+    unit_tests.root_module.addImport("websocket", websocket_dep.module("websocket"));
+    unit_tests.root_module.addImport("webview", webview_dep.module("webview"));
+    unit_tests.linkLibrary(webview_lib);
+
+    if (enable_embedded_wasm3) {
+        const wasm3_dep = b.dependency("wasm3", .{ .target = target, .optimize = optimize });
+        unit_tests.addIncludePath(wasm3_dep.path("source"));
+        unit_tests.linkLibrary(wasm3_dep.artifact("wasm3"));
+    }
+
+    const run_unit_tests = b.addRunArtifact(unit_tests);
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&run_unit_tests.step);
+
     // Run step
     const run_cmd = b.addRunArtifact(exe);
     b.step("run", "Run the app").dependOn(&run_cmd.step);

@@ -439,6 +439,7 @@ const novita_fallback = [_][]const u8{
 };
 const ollama_fallback = [_][]const u8{
     "llama4",
+    "gemma3:12b",
     "llama3.2",
     "mistral",
     "phi3",

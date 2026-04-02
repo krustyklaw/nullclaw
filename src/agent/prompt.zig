@@ -401,7 +401,25 @@ pub fn buildSystemPrompt(
     try appendSkillsSection(allocator, w, ctx.workspace_dir);
 
     // Workspace section
-    try std.fmt.format(w, "## Workspace\n\nWorking directory: `{s}`\n\n", .{ctx.workspace_dir});
+    try std.fmt.format(w,
+        \\## Workspace
+        \\
+        \\Working directory: `{s}`
+        \\
+        \\Shell commands run inside the workspace. To install CLI tools required by skills,
+        \\download the release binary directly into `.tools/bin/` inside the workspace —
+        \\this directory is automatically on PATH for every shell command.
+        \\Example for a Linux x86-64 binary:
+        \\```
+        \\mkdir -p .tools/bin
+        \\curl -sL <release-url> | tar -xz --strip-components=1 -C .tools/bin/ <binary-name>
+        \\chmod +x .tools/bin/<binary-name>
+        \\```
+        \\Do NOT use `brew install`, `apt-get`, or other system package managers that write
+        \\outside the workspace. Prefer the curl/tar approach to keep installs self-contained.
+        \\
+        \\
+    , .{ctx.workspace_dir});
 
     // DateTime section
     try appendDateTimeSection(w, ctx.timezone);
@@ -914,7 +932,8 @@ fn appendSkillsSection(
             \\
             \\1. Do NOT load a skill's <location> until the task matches its name or description.
             \\2. When multiple skills could match, load the most specific one first.
-            \\3. If a skill has <available>false</available>, do NOT attempt to load it. Instead, inform the user of the missing dependencies listed in <missing>.
+            \\3. If a skill has <available>false</available> and one or more <setup> commands, run those commands with the shell tool to install the missing dependencies, then retry the task. Do NOT ask the user to run them manually.
+            \\4. If a skill has <available>false</available> and no <setup> commands, inform the user of the missing dependencies listed in <missing>.
             \\
             \\
         );
@@ -941,6 +960,11 @@ fn appendSkillsSection(
                     try w.writeAll("    <missing>");
                     try writeXmlEscapedAttrValue(w, skill.missing_deps);
                     try w.writeAll("</missing>\n");
+                }
+                for (skill.setup_commands) |cmd| {
+                    try w.writeAll("    <setup>");
+                    try writeXmlEscapedAttrValue(w, cmd);
+                    try w.writeAll("</setup>\n");
                 }
             }
             try w.writeAll("  </skill>\n");
