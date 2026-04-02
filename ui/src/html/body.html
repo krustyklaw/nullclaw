@@ -264,6 +264,22 @@
                             </svg>
                             Scheduled Analysis
                         </button>
+                        <button
+                            class="nav-item"
+                            onclick="showFeature('clawhub')"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                            </svg>
+                            ClawHub Skills
+                        </button>
                     </div>
 
                     <div class="config-section">
@@ -1069,5 +1085,46 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- ClawHub -->
+                <div class="feature-screen" id="fs-clawhub">
+                    <div class="main-header">
+                        <div class="main-header-left">
+                            <div class="main-title">ClawHub</div>
+                            <div class="main-subtitle">Discover and install skills from the community registry</div>
+                        </div>
+                    </div>
+
+                    <div class="clawhub-container">
+                        <div class="search-section">
+                            <div class="search-input-group">
+                                <input type="text" id="clawhub-search-input" placeholder="Search skills (e.g. gmail, calendar, postgres)..." onkeyup="if(event.key==='Enter')window.searchClawHub()" />
+                                <button id="clawhub-search-btn" class="btn btn-primary" onclick="window.searchClawHub()">Search</button>
+                            </div>
+                        </div>
+
+                        <div id="clawhub-results-loading" class="loading-state" style="display:none">
+                            <div class="spinner"></div>
+                            Searching ClawHub...
+                        </div>
+
+                        <div id="clawhub-results" class="skills-grid">
+                            <div class="empty-state">
+                                <div class="icon">🔍</div>
+                                <div>Search for a skill to begin. Try "gmail" or "coding".</div>
+                            </div>
+                        </div>
+
+                        <div class="installed-section">
+                            <div class="section-header">
+                                <h3>Installed Skills</h3>
+                                <div class="badge" id="installed-count">0</div>
+                            </div>
+                            <div id="installed-skills" class="skills-grid mini">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
