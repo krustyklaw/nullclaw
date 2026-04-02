@@ -122,12 +122,6 @@ jobs:
 
           mv dist/* .
 
-          git lfs install
-          git lfs track "*.tar.gz"
-          git lfs track "*.dmg"
-          git lfs track "*.zip"
-          git lfs track "*.exe"
-
           git add .
           git commit -m "Update release binaries for ${{ github.ref_name }}" || true
           git push --force origin HEAD:binaries
