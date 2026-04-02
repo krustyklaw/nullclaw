@@ -17,7 +17,15 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(zig test:*)",
+      "Bash(grep:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(kill %1)",
+      "Read(//home/shiham/.krustyklaw/workspace/skills/gog-calendar/**)",
+      "Read(//home/shiham/.krustyklaw/workspace/skills/**)",
+      "Bash(node:*)"
     ]
   }
 }

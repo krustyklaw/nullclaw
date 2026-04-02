@@ -349,7 +349,7 @@ pub const ReliableProvider = struct {
         return self.last_error_msg[0..self.last_error_len];
     }
 
-    fn maybeRecordFallbackErrorDetail(prov: Provider, err: anyerror) void {
+    fn maybeRecordFallbackErrorDetail(allocator: std.mem.Allocator, prov: Provider, err: anyerror) void {
         if (err == error.ApiError or
             err == error.RateLimited or
             err == error.ContextLengthExceeded or
@@ -357,6 +357,15 @@ pub const ReliableProvider = struct {
         {
             return;
         }
+
+        // Only record generic error if provider didn't already record something specific.
+        if (root.snapshotLastApiErrorDetail(allocator)) |maybe_snap| {
+            if (maybe_snap) |snap| {
+                allocator.free(snap);
+                return;
+            }
+        } else |_| {}
+
         root.setLastApiErrorDetail(prov.getName(), @errorName(err));
     }
 
@@ -409,7 +418,7 @@ pub const ReliableProvider = struct {
             if (prov.chatWithSystem(allocator, system_prompt, message, current_model, 0.7)) |result| {
                 return result;
             } else |err| {
-                maybeRecordFallbackErrorDetail(prov, err);
+                maybeRecordFallbackErrorDetail(allocator, prov, err);
                 self.storeErrorName(err);
                 const err_slice = self.lastErrorSlice();
 
@@ -454,7 +463,7 @@ pub const ReliableProvider = struct {
                 }
                 return annotated;
             } else |err| {
-                maybeRecordFallbackErrorDetail(prov, err);
+                maybeRecordFallbackErrorDetail(allocator, prov, err);
                 self.storeErrorName(err);
                 const err_slice = self.lastErrorSlice();
 

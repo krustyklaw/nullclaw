@@ -27,6 +27,7 @@ window.searchClawHub = searchClawHub;
 window.installSkill = installSkill;
 window.removeSkill = removeSkill;
 window.loadInstalledSkills = loadInstalledSkills;
+window.switchClawHubTab = switchClawHubTab;
 window.toggleTask = toggleTask;
 window.searchClawHub = searchClawHub;
 window.installSkill = installSkill;
@@ -94,6 +95,21 @@ window.removeSkill = removeSkill;
             }
 
             // Init
+            async function fetchStatus() {
+                // Poll up to ~4 s for the backend to become available.
+                // This handles the desktop case where the WebView loads before
+                // the local HTTP server is fully up, and the case where
+                // ~/.krustyklaw is missing so the backend starts unconfigured.
+                for (let i = 0; i < 8; i++) {
+                    try {
+                        const r = await fetch("/api/status");
+                        if (r.ok) return await r.json();
+                    } catch (_) {}
+                    await new Promise(res => setTimeout(res, 500));
+                }
+                return null;
+            }
+
             async function init() {
                 const stepTitle = document.getElementById("step-0-title");
                 const stepDesc = document.getElementById("step-0-desc");
@@ -103,40 +119,52 @@ window.removeSkill = removeSkill;
                 if (stepDesc)
                     stepDesc.textContent =
                         "Tell us your name and choose a name for your AI assistant.";
-                try {
-                    const r = await fetch("/api/status");
-                    const data = await r.json();
-                    if (data.configured) {
-                        isFirstTime = false;
-                        const model = data.model || data.provider || "";
-                        document.getElementById(
-                            "sidebar-model-label",
-                        ).textContent = model;
-                        if (data.user_name) {
-                            document.getElementById("user-name-input").value =
-                                data.user_name;
-                            updateUserProfile(data.user_name);
-                        }
-                        if (data.agent_name) {
-                            document.getElementById("agent-name-input").value =
-                                data.agent_name;
-                            updateAgentNameUI(data.agent_name);
-                        }
-                        if (data.provider) {
+
+                // Show setup wizard immediately — this is the default start page.
+                // We only switch to the app shell once we confirm the config is
+                // fully complete (provider + user_name + agent_name all present).
+                showScreen("setup");
+
+                const data = await fetchStatus();
+
+                // All four conditions must be satisfied to skip onboarding.
+                const fullyConfigured =
+                    data &&
+                    data.configured &&
+                    data.provider &&
+                    data.user_name &&
+                    data.agent_name;
+
+                if (fullyConfigured) {
+                    isFirstTime = false;
+                    const model = data.model || data.provider || "";
+                    document.getElementById(
+                        "sidebar-model-label",
+                    ).textContent = model;
+                    document.getElementById("user-name-input").value = data.user_name;
+                    updateUserProfile(data.user_name);
+                    document.getElementById("agent-name-input").value = data.agent_name;
+                    updateAgentNameUI(data.agent_name);
+                    preselectProvider(data.provider, data.model);
+                    populateSidebarModels(data.provider, data.model);
+                    const subtitle = document.getElementById("chat-subtitle");
+                    if (subtitle) subtitle.textContent = "Powered by " + data.provider;
+                    showScreen("app-shell");
+                    showFeature("chat");
+                } else {
+                    // Stay on setup wizard. Pre-fill whatever partial data exists
+                    // so the user doesn't have to re-enter it.
+                    isFirstTime = !(data && data.configured);
+                    if (data) {
+                        if (data.user_name)
+                            document.getElementById("user-name-input").value = data.user_name;
+                        if (data.agent_name)
+                            document.getElementById("agent-name-input").value = data.agent_name;
+                        if (data.provider)
                             preselectProvider(data.provider, data.model);
-                            populateSidebarModels(data.provider, data.model);
-                            const subtitle = document.getElementById("chat-subtitle");
-                            if (subtitle) subtitle.textContent = "Powered by " + data.provider;
-                        }
-                        showScreen("app-shell");
-                    } else {
-                        isFirstTime = true;
-                        showScreen("setup");
                     }
-                } catch (e) {
-                    isFirstTime = true;
-                    showScreen("setup");
                 }
+
                 loadGmailStatus();
                 renderDocList();
                 renderTaskList();
@@ -168,6 +196,7 @@ window.removeSkill = removeSkill;
                 const target = document.getElementById("fs-" + name);
                 if (target) target.classList.add("active");
                 if (name === "clawhub") {
+                    switchClawHubTab("browse");
                     loadInstalledSkills();
                 }
             }
@@ -370,13 +399,21 @@ window.removeSkill = removeSkill;
             }
 
             function updateAgentNameUI(name) {
-                const displayName = name && name.trim() ? name.trim() : "KrustyKlaw";
-                document.title = displayName + " — KrustyKlaw";
+                const displayName = name && name.trim() ? name.trim() : "";
+                document.title = displayName ? displayName + " — KrustyKlaw" : "KrustyKlaw";
                 const sidebarName = document.getElementById("sidebar-agent-name");
                 if (sidebarName) sidebarName.textContent = displayName;
             }
 
             function startChat() {
+                const agentName = document.getElementById("sidebar-agent-name")?.textContent.trim();
+                if (!agentName) {
+                    // Onboarding was never completed — send the user back to the wizard.
+                    isFirstTime = true;
+                    showScreen("setup");
+                    goStep(0);
+                    return;
+                }
                 history = [];
                 showScreen("app-shell");
                 showFeature("chat");
@@ -402,13 +439,10 @@ window.removeSkill = removeSkill;
                 const msgs = document.getElementById("messages");
                 const sidebarName =
                     document.getElementById("sidebar-agent-name");
-                const displayName =
-                    sidebarName && sidebarName.textContent
-                        ? sidebarName.textContent.trim()
-                        : "KrustyKlaw";
+                const displayName = sidebarName?.textContent.trim() || "";
                 msgs.innerHTML = `<div id="welcome-area">
                     <div class="message-group">
-                        <div class="message-sender">KRUSTYKLAW</div>
+                        <div class="message-sender">${displayName.toUpperCase()}</div>
                         <div class="message-bubble">
                             Hello, I am your AI assistant. Please ask me anything. I can help with code, writing, research, and more.
                         </div>
@@ -462,7 +496,8 @@ window.removeSkill = removeSkill;
                 const typingDiv = document.createElement("div");
                 typingDiv.className = "message-group";
                 typingDiv.id = typingId;
-                typingDiv.innerHTML = `<div class="message-sender">KRUSTYKLAW</div>
+                const typingAgentName = (document.getElementById("sidebar-agent-name")?.textContent.trim().toUpperCase()) || "AGENT";
+                typingDiv.innerHTML = `<div class="message-sender">${typingAgentName}</div>
                     <div class="typing"><span></span><span></span><span></span></div>`;
                 msgs.appendChild(typingDiv);
                 scrollToBottom();
@@ -1243,6 +1278,16 @@ window.removeSkill = removeSkill;
                 }
             }
 
+            function switchClawHubTab(tab) {
+                const tabs = ["browse", "installed"];
+                tabs.forEach(t => {
+                    const btn = document.getElementById("ch-tab-" + t);
+                    const pane = document.getElementById("ch-pane-" + t);
+                    if (btn) btn.classList.toggle("active", t === tab);
+                    if (pane) pane.style.display = t === tab ? "flex" : "none";
+                });
+            }
+
             async function loadInstalledSkills() {
                 const countEl = document.getElementById("installed-count");
                 const gridEl = document.getElementById("installed-skills");
@@ -1251,22 +1296,25 @@ window.removeSkill = removeSkill;
                     const r = await fetch("/api/skills/list");
                     if (!r.ok) return;
                     const data = await r.json();
-                    
+
                     if (countEl) countEl.textContent = data.length;
-                    
+
                     if (!data || data.length === 0) {
-                        if (gridEl) gridEl.innerHTML = `<div style="font-size:12px;color:var(--text2);padding:16px;">No skills installed in workspace.</div>`;
+                        if (gridEl) gridEl.innerHTML = `<div class="empty-state"><div class="icon">📦</div><div>No skills installed yet. Browse the registry to find skills.</div></div>`;
                         return;
                     }
 
                     if (gridEl) {
                         gridEl.innerHTML = data.map(skill => `
-                            <div class="skill-card mini">
-                                <div class="skill-name">${escHtml(skill.name)}</div>
-                                <div class="skill-desc" style="-webkit-line-clamp:2">${escHtml(skill.description || "")}</div>
+                            <div class="skill-card">
+                                <div class="skill-header">
+                                    <div class="skill-name">${escHtml(skill.name)}</div>
+                                    <div class="skill-slug">v${escHtml(skill.version || "0.0.1")}</div>
+                                </div>
+                                <div class="skill-desc">${escHtml(skill.description || "")}</div>
                                 <div class="skill-footer">
-                                    <div class="skill-meta">v${escHtml(skill.version || "0.0.1")}</div>
-                                    <button class="btn skill-btn remove" onclick="window.removeSkill('${skill.name}')">Remove</button>
+                                    <div class="skill-meta">${skill.available === false ? '<span style="color:var(--error)">Missing deps</span>' : '<span style="color:var(--success, #22c55e)">Ready</span>'}</div>
+                                    <button class="btn skill-btn remove" onclick="window.removeSkill('${escHtml(skill.name)}')">Remove</button>
                                 </div>
                             </div>
                         `).join("");

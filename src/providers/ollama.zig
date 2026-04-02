@@ -22,11 +22,13 @@ const OllamaMessage = struct {
     role: []const u8 = "",
     content: ?[]const u8 = null,
     thinking: ?[]const u8 = null,
+    thought: ?[]const u8 = null,
     tool_calls: ?[]const OllamaToolCall = null,
 };
 
 const OllamaChatResponse = struct {
-    message: OllamaMessage = .{},
+    message: ?OllamaMessage = null,
+    @"error": ?[]const u8 = null,
 };
 
 // ─── Tool Call Helpers ───────────────────────────────────────────────────────
@@ -254,15 +256,33 @@ pub const OllamaProvider = struct {
         model: []const u8,
         temperature: f64,
     ) ![]const u8 {
+        var buf: std.ArrayListUnmanaged(u8) = .empty;
+        errdefer buf.deinit(allocator);
+
+        try buf.appendSlice(allocator, "{\"model\":\"");
+        try buf.appendSlice(allocator, model);
+        try buf.appendSlice(allocator, "\",\"messages\":[");
+
         if (system_prompt) |sys| {
-            return std.fmt.allocPrint(allocator,
-                \\{{"model":"{s}","messages":[{{"role":"system","content":"{s}"}},{{"role":"user","content":"{s}"}}],"stream":false,"think":false,"options":{{"temperature":{d:.2}}}}}
-            , .{ model, sys, message, temperature });
-        } else {
-            return std.fmt.allocPrint(allocator,
-                \\{{"model":"{s}","messages":[{{"role":"user","content":"{s}"}}],"stream":false,"think":false,"options":{{"temperature":{d:.2}}}}}
-            , .{ model, message, temperature });
+            try buf.appendSlice(allocator, "{\"role\":\"system\",\"content\":\"");
+            const escaped_sys = try jsonEscapeString(allocator, sys);
+            defer allocator.free(escaped_sys);
+            try buf.appendSlice(allocator, escaped_sys);
+            try buf.appendSlice(allocator, "\"},");
         }
+
+        try buf.appendSlice(allocator, "{\"role\":\"user\",\"content\":\"");
+        const escaped_msg = try jsonEscapeString(allocator, message);
+        defer allocator.free(escaped_msg);
+        try buf.appendSlice(allocator, escaped_msg);
+        try buf.appendSlice(allocator, "\"}],\"stream\":false,\"think\":false,\"options\":{\"temperature\":");
+
+        var temp_buf: [16]u8 = undefined;
+        const temp_str = try std.fmt.bufPrint(&temp_buf, "{d:.2}", .{temperature});
+        try buf.appendSlice(allocator, temp_str);
+        try buf.appendSlice(allocator, "}}");
+
+        return try buf.toOwnedSlice(allocator);
     }
 
     /// Parse an Ollama response, handling tool calls, thinking-only, and plain text.
@@ -271,7 +291,15 @@ pub const OllamaProvider = struct {
             .ignore_unknown_fields = true,
         });
         defer parsed.deinit();
-        const message = parsed.value.message;
+
+        if (parsed.value.@"error") |err_msg| {
+            if (err_msg.len > 0) {
+                root.setLastApiErrorDetail("Ollama", err_msg);
+                return error.OllamaApiError;
+            }
+        }
+
+        const message = parsed.value.message orelse return error.NoResponseContent;
 
         // If model returned tool calls, format them for the agent loop
         if (message.tool_calls) |tcs| {
@@ -287,14 +315,17 @@ pub const OllamaProvider = struct {
             }
         }
 
-        // Thinking-only response (model reasoned but produced no output)
-        if (message.thinking) |thinking| {
-            const preview_len = @min(thinking.len, 200);
-            return try std.fmt.allocPrint(
-                allocator,
-                "I was thinking about this: {s}... but I didn't complete my response. Could you try asking again?",
-                .{thinking[0..preview_len]},
-            );
+        // Thinking-only response (model reasoned but produced no output).
+        // Support both v0.5.0 'thought' and legacy/DeepSeek-style 'thinking' fields.
+        if (message.thought orelse message.thinking) |thinking| {
+            if (thinking.len > 0) {
+                const preview_len = @min(thinking.len, 200);
+                return try std.fmt.allocPrint(
+                    allocator,
+                    "I was thinking about this: {s}... but I didn't complete my response. Could you try asking again?",
+                    .{thinking[0..preview_len]},
+                );
+            }
         }
 
         // Empty response
@@ -329,16 +360,25 @@ pub const OllamaProvider = struct {
         const self: *OllamaProvider = @ptrCast(@alignCast(ptr));
 
         var url_buf: [2048]u8 = undefined;
-        const url = std.fmt.bufPrint(&url_buf, "{s}/api/chat", .{self.base_url}) catch return error.OllamaApiError;
+        const url = std.fmt.bufPrint(&url_buf, "{s}/api/chat", .{self.base_url}) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
 
         const body = try buildRequestBody(allocator, system_prompt, message, model, temperature);
         defer allocator.free(body);
 
         var headers_buf: [1][]const u8 = undefined;
         var auth_hdr_buf: [512]u8 = undefined;
-        const headers = self.buildAuthHeaders(&headers_buf, &auth_hdr_buf) catch return error.OllamaApiError;
+        const headers = self.buildAuthHeaders(&headers_buf, &auth_hdr_buf) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
 
-        const resp_body = root.curlPostTimed(allocator, url, body, headers, 0) catch return error.OllamaApiError;
+        const resp_body = root.curlPostTimed(allocator, url, body, headers, 0) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
         defer allocator.free(resp_body);
 
         return parseResponse(allocator, resp_body);
@@ -354,16 +394,25 @@ pub const OllamaProvider = struct {
         const self: *OllamaProvider = @ptrCast(@alignCast(ptr));
 
         var url_buf: [2048]u8 = undefined;
-        const url = std.fmt.bufPrint(&url_buf, "{s}/api/chat", .{self.base_url}) catch return error.OllamaApiError;
+        const url = std.fmt.bufPrint(&url_buf, "{s}/api/chat", .{self.base_url}) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
 
         const body = try buildChatRequestBody(allocator, request, model, temperature);
         defer allocator.free(body);
 
         var headers_buf: [1][]const u8 = undefined;
         var auth_hdr_buf: [512]u8 = undefined;
-        const headers = self.buildAuthHeaders(&headers_buf, &auth_hdr_buf) catch return error.OllamaApiError;
+        const headers = self.buildAuthHeaders(&headers_buf, &auth_hdr_buf) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
 
-        const resp_body = root.curlPostTimed(allocator, url, body, headers, request.timeout_secs) catch return error.OllamaApiError;
+        const resp_body = root.curlPostTimed(allocator, url, body, headers, request.timeout_secs) catch |err| {
+            root.setLastApiErrorDetail("Ollama", @errorName(err));
+            return error.OllamaApiError;
+        };
         defer allocator.free(resp_body);
 
         const text = try parseResponse(allocator, resp_body);
@@ -754,7 +803,7 @@ test "formatToolCallsForLoop with single tool call" {
     });
     defer parsed.deinit();
 
-    const result = try formatToolCallsForLoop(alloc, parsed.value.message);
+    const result = try formatToolCallsForLoop(alloc, parsed.value.message.?);
     defer alloc.free(result);
 
     // Verify it's valid JSON
@@ -863,4 +912,18 @@ test "jsonEscapeString escapes quotes and backslashes" {
     const result = try jsonEscapeString(alloc, "he said \"hello\\world\"");
     defer alloc.free(result);
     try std.testing.expectEqualStrings("he said \\\"hello\\\\world\\\"", result);
+}
+
+test "parseResponse reports API errors" {
+    const alloc = std.testing.allocator;
+    const body =
+        \\{"error":"model 'gemma3:12b' not found"}
+    ;
+    root.clearLastApiErrorDetail();
+    const result = OllamaProvider.parseResponse(alloc, body);
+    try std.testing.expectError(error.OllamaApiError, result);
+
+    const detail = (try root.snapshotLastApiErrorDetail(alloc)).?;
+    defer alloc.free(detail);
+    try std.testing.expectEqualStrings("Ollama: model 'gemma3:12b' not found", detail);
 }

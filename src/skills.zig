@@ -30,6 +30,10 @@ pub const Skill = struct {
     requires_bins: []const []const u8 = &.{},
     /// List of environment variables required by this skill (e.g. "OPENAI_API_KEY").
     requires_env: []const []const u8 = &.{},
+    /// Shell commands the agent should run to install this skill's dependencies.
+    /// Declared by the skill author. When a skill is unavailable and setup_commands
+    /// are present, the agent runs them automatically instead of asking the user.
+    setup_commands: []const []const u8 = &.{},
     /// Whether all requirements are satisfied. Set by checkRequirements().
     available: bool = true,
     /// Human-readable description of missing dependencies. Set by checkRequirements().
@@ -46,6 +50,7 @@ pub const SkillManifest = struct {
     always: bool = false,
     requires_bins: []const []const u8 = &.{},
     requires_env: []const []const u8 = &.{},
+    setup_commands: []const []const u8 = &.{},
 };
 
 // ── JSON Parsing (manual, no allocations) ───────────────────────
@@ -116,6 +121,133 @@ fn freeStringArray(allocator: std.mem.Allocator, arr: []const []const u8) void {
     allocator.free(arr);
 }
 
+/// Extract a raw JSON object or array value for a given key in a JSON blob.
+/// Returns the full value including its opening/closing brace or bracket.
+/// No allocations — returns a slice into `json`.
+fn extractJsonValue(json: []const u8, key: []const u8) ?[]const u8 {
+    var needle_buf: [256]u8 = undefined;
+    const quoted_key = std.fmt.bufPrint(&needle_buf, "\"{s}\"", .{key}) catch return null;
+    const key_pos = std.mem.indexOf(u8, json, quoted_key) orelse return null;
+    var i = key_pos + quoted_key.len;
+    while (i < json.len and (json[i] == ' ' or json[i] == '\t' or json[i] == ':' or json[i] == '\n' or json[i] == '\r')) : (i += 1) {}
+    if (i >= json.len) return null;
+    const open = json[i];
+    const close: u8 = switch (open) {
+        '{' => '}',
+        '[' => ']',
+        else => return null,
+    };
+    const start = i;
+    var depth: usize = 0;
+    var in_string = false;
+    while (i < json.len) : (i += 1) {
+        if (in_string) {
+            if (json[i] == '\\') { i += 1; continue; }
+            if (json[i] == '"') in_string = false;
+        } else {
+            if (json[i] == '"') { in_string = true; continue; }
+            if (json[i] == open) depth += 1;
+            if (json[i] == close) {
+                depth -= 1;
+                if (depth == 0) return json[start .. i + 1];
+            }
+        }
+    }
+    return null;
+}
+
+/// Parse `openclaw.requires.bins` from a SKILL.md `metadata` JSON value.
+/// Returns an allocated slice; caller must freeStringArray on result if len > 0.
+fn parseOpenClawBins(allocator: std.mem.Allocator, metadata_json: []const u8) ![]const []const u8 {
+    const openclaw = extractJsonValue(metadata_json, "openclaw") orelse return &.{};
+    const requires = extractJsonValue(openclaw, "requires") orelse return &.{};
+    return parseStringArray(allocator, requires, "bins");
+}
+
+/// Parse `openclaw.install` entries from a SKILL.md `metadata` JSON value and convert
+/// each entry to a shell command based on its `kind` field.
+/// Supported kinds: brew, npm, pip, pip3, apt, apt-get, cargo, sh, shell.
+/// Returns an allocated slice; caller must freeStringArray on result if len > 0.
+fn parseOpenClawInstallCommands(allocator: std.mem.Allocator, metadata_json: []const u8) ![]const []const u8 {
+    const openclaw = extractJsonValue(metadata_json, "openclaw") orelse return &.{};
+    const install_arr = extractJsonValue(openclaw, "install") orelse return &.{};
+
+    var items: std.ArrayListUnmanaged([]const u8) = .empty;
+    errdefer {
+        for (items.items) |item| allocator.free(item);
+        items.deinit(allocator);
+    }
+
+    // Walk the array body to find each {...} object
+    const inner = if (install_arr.len >= 2) install_arr[1 .. install_arr.len - 1] else return &.{};
+    var i: usize = 0;
+    while (i < inner.len) : (i += 1) {
+        if (inner[i] != '{') continue;
+        // Find matching closing brace
+        var depth: usize = 0;
+        var in_string = false;
+        var j = i;
+        var obj_end: usize = 0;
+        while (j < inner.len) : (j += 1) {
+            if (in_string) {
+                if (inner[j] == '\\') { j += 1; continue; }
+                if (inner[j] == '"') in_string = false;
+            } else {
+                if (inner[j] == '"') { in_string = true; continue; }
+                if (inner[j] == '{') depth += 1;
+                if (inner[j] == '}') {
+                    depth -= 1;
+                    if (depth == 0) { obj_end = j; break; }
+                }
+            }
+        }
+        if (obj_end == 0) break;
+        const obj = inner[i .. obj_end + 1];
+        const kind = parseStringField(obj, "kind") orelse { i = obj_end; continue; };
+        // "formula" is used by brew; "package" by others; "command" by sh/shell
+        const pkg = parseStringField(obj, "formula") orelse
+            parseStringField(obj, "package") orelse
+            parseStringField(obj, "command") orelse
+            { i = obj_end; continue; };
+        const cmd = blk: {
+            if (std.mem.eql(u8, kind, "brew"))
+                break :blk try std.fmt.allocPrint(allocator, "brew install {s}", .{pkg});
+            if (std.mem.eql(u8, kind, "npm"))
+                break :blk try std.fmt.allocPrint(allocator, "npm install -g {s}", .{pkg});
+            if (std.mem.eql(u8, kind, "pip") or std.mem.eql(u8, kind, "pip3"))
+                break :blk try std.fmt.allocPrint(allocator, "pip3 install {s}", .{pkg});
+            if (std.mem.eql(u8, kind, "apt") or std.mem.eql(u8, kind, "apt-get"))
+                break :blk try std.fmt.allocPrint(allocator, "apt-get install -y {s}", .{pkg});
+            if (std.mem.eql(u8, kind, "cargo"))
+                break :blk try std.fmt.allocPrint(allocator, "cargo install {s}", .{pkg});
+            if (std.mem.eql(u8, kind, "sh") or std.mem.eql(u8, kind, "shell"))
+                break :blk try allocator.dupe(u8, pkg);
+            i = obj_end;
+            continue;
+        };
+        try items.append(allocator, cmd);
+        i = obj_end;
+    }
+
+    return try items.toOwnedSlice(allocator);
+}
+
+/// Merge two heap-allocated string slices into a new owned slice.
+/// Each string is duped into the new allocation.
+/// Returns `&.{}` (static) only when both inputs are empty; otherwise heap-allocates.
+/// Caller must freeStringArray the result if len > 0.
+fn mergeStringArrays(allocator: std.mem.Allocator, a: []const []const u8, b: []const []const u8) ![]const []const u8 {
+    if (a.len == 0 and b.len == 0) return &.{};
+    var result: std.ArrayListUnmanaged([]const u8) = .empty;
+    errdefer {
+        for (result.items) |item| allocator.free(item);
+        result.deinit(allocator);
+    }
+    for (a) |item| try result.append(allocator, try allocator.dupe(u8, item));
+    for (b) |item| try result.append(allocator, try allocator.dupe(u8, item));
+    return try result.toOwnedSlice(allocator);
+}
+
 /// Parse a skill.json manifest from raw JSON bytes.
 /// Returns slices pointing into the original json_bytes (no allocations needed
 /// beyond what the caller already owns for json_bytes).
@@ -140,6 +272,7 @@ pub fn parseManifestAlloc(allocator: std.mem.Allocator, json_bytes: []const u8) 
     var m = try parseManifest(json_bytes);
     m.requires_bins = parseStringArray(allocator, json_bytes, "requires_bins") catch &.{};
     m.requires_env = parseStringArray(allocator, json_bytes, "requires_env") catch &.{};
+    m.setup_commands = parseStringArray(allocator, json_bytes, "setup_commands") catch &.{};
     return m;
 }
 
@@ -486,10 +619,28 @@ fn parseFrontmatterSkill(
 
     const always = parseFrontmatterBoolField(meta, "always") orelse false;
 
-    const requires_bins = parseFrontmatterStringArray(allocator, meta, "requires_bins") catch &.{};
-    errdefer if (requires_bins.len > 0) freeStringArray(allocator, requires_bins);
+    // Parse top-level YAML fields first.
+    const fm_requires_bins = parseFrontmatterStringArray(allocator, meta, "requires_bins") catch &.{};
+    defer if (fm_requires_bins.len > 0) freeStringArray(allocator, fm_requires_bins);
     const requires_env = parseFrontmatterStringArray(allocator, meta, "requires_env") catch &.{};
     errdefer if (requires_env.len > 0) freeStringArray(allocator, requires_env);
+    const fm_setup_commands = parseFrontmatterStringArray(allocator, meta, "setup_commands") catch &.{};
+    defer if (fm_setup_commands.len > 0) freeStringArray(allocator, fm_setup_commands);
+
+    // Also check the OpenClaw `metadata` JSON field for requires.bins and install commands.
+    // This lets skills that only have `metadata: {"openclaw":{...}}` work without
+    // duplicating requires_bins / setup_commands in YAML.
+    const oc_metadata = parseFrontmatterField(meta, "metadata") orelse "";
+    const oc_bins = parseOpenClawBins(allocator, oc_metadata) catch &.{};
+    defer if (oc_bins.len > 0) freeStringArray(allocator, oc_bins);
+    const oc_cmds = parseOpenClawInstallCommands(allocator, oc_metadata) catch &.{};
+    defer if (oc_cmds.len > 0) freeStringArray(allocator, oc_cmds);
+
+    // Merge: OpenClaw data supplements (does not replace) explicit YAML fields.
+    const requires_bins = try mergeStringArrays(allocator, fm_requires_bins, oc_bins);
+    errdefer if (requires_bins.len > 0) freeStringArray(allocator, requires_bins);
+    const setup_commands = try mergeStringArrays(allocator, fm_setup_commands, oc_cmds);
+    errdefer if (setup_commands.len > 0) freeStringArray(allocator, setup_commands);
 
     const name = try allocator.dupe(u8, skill_name);
     errdefer allocator.free(name);
@@ -514,6 +665,7 @@ fn parseFrontmatterSkill(
         .always = always,
         .requires_bins = requires_bins,
         .requires_env = requires_env,
+        .setup_commands = setup_commands,
         .path = path,
     };
 }
@@ -567,6 +719,7 @@ pub fn loadSkill(allocator: std.mem.Allocator, skill_dir_path: []const u8) !Skil
             .always = false,
             .requires_bins = &.{},
             .requires_env = &.{},
+            .setup_commands = &.{},
             .path = path,
         };
     }
@@ -606,6 +759,7 @@ pub fn loadSkill(allocator: std.mem.Allocator, skill_dir_path: []const u8) !Skil
             .always = manifest.always,
             .requires_bins = manifest.requires_bins,
             .requires_env = manifest.requires_env,
+            .setup_commands = manifest.setup_commands,
             .path = path,
         };
     }
@@ -624,6 +778,7 @@ pub fn freeSkill(allocator: std.mem.Allocator, skill: *const Skill) void {
     if (skill.missing_deps.len > 0) allocator.free(skill.missing_deps);
     if (skill.requires_bins.len > 0) freeStringArray(allocator, skill.requires_bins);
     if (skill.requires_env.len > 0) freeStringArray(allocator, skill.requires_env);
+    if (skill.setup_commands.len > 0) freeStringArray(allocator, skill.setup_commands);
 }
 
 /// Free a slice of skills and all their contents.
@@ -4630,6 +4785,78 @@ test "parseFrontmatterSkill minimal frontmatter" {
     try std.testing.expectEqualStrings("", skill.description);
     try std.testing.expect(!skill.always);
     try std.testing.expectEqualStrings("Instructions.", skill.instructions);
+}
+
+test "parseFrontmatterSkill openclaw metadata bins and install commands" {
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("oc-skill");
+    {
+        const f = try tmp.dir.createFile("oc-skill/SKILL.md", .{});
+        defer f.close();
+        try f.writeAll(
+            \\---
+            \\name: gog-calendar
+            \\description: Google Calendar via gogcli
+            \\metadata: {"openclaw":{"emoji":"📅","requires":{"bins":["gog"]},"install":[{"id":"brew","kind":"brew","formula":"steipete/tap/gogcli","bins":["gog"],"label":"Install gogcli (brew)"}]}}
+            \\---
+            \\# Instructions
+        );
+    }
+
+    const base = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(base);
+    const skill_dir = try std.fs.path.join(allocator, &.{ base, "oc-skill" });
+    defer allocator.free(skill_dir);
+
+    const skill = try parseFrontmatterSkill(allocator, skill_dir);
+    defer freeSkill(allocator, &skill);
+
+    try std.testing.expectEqualStrings("gog-calendar", skill.name);
+    try std.testing.expectEqual(@as(usize, 1), skill.requires_bins.len);
+    try std.testing.expectEqualStrings("gog", skill.requires_bins[0]);
+    try std.testing.expectEqual(@as(usize, 1), skill.setup_commands.len);
+    try std.testing.expectEqualStrings("brew install steipete/tap/gogcli", skill.setup_commands[0]);
+}
+
+test "parseFrontmatterSkill openclaw metadata merged with explicit yaml fields" {
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("merged-skill");
+    {
+        const f = try tmp.dir.createFile("merged-skill/SKILL.md", .{});
+        defer f.close();
+        try f.writeAll(
+            \\---
+            \\name: merged
+            \\requires_bins: [jq]
+            \\setup_commands: [pip3 install requests]
+            \\metadata: {"openclaw":{"requires":{"bins":["gog"]},"install":[{"kind":"brew","formula":"steipete/tap/gogcli"}]}}
+            \\---
+            \\# Instructions
+        );
+    }
+
+    const base = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(base);
+    const skill_dir = try std.fs.path.join(allocator, &.{ base, "merged-skill" });
+    defer allocator.free(skill_dir);
+
+    const skill = try parseFrontmatterSkill(allocator, skill_dir);
+    defer freeSkill(allocator, &skill);
+
+    // Both YAML and OpenClaw bins should be present
+    try std.testing.expectEqual(@as(usize, 2), skill.requires_bins.len);
+    try std.testing.expectEqualStrings("jq", skill.requires_bins[0]);
+    try std.testing.expectEqualStrings("gog", skill.requires_bins[1]);
+    // Both YAML and OpenClaw setup commands should be present
+    try std.testing.expectEqual(@as(usize, 2), skill.setup_commands.len);
+    try std.testing.expectEqualStrings("pip3 install requests", skill.setup_commands[0]);
+    try std.testing.expectEqualStrings("brew install steipete/tap/gogcli", skill.setup_commands[1]);
 }
 
 test "loadSkill SKILL.md with frontmatter populates manifest" {
