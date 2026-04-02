@@ -40,7 +40,7 @@ jobs:
       # (pkg-config on Linux, framework search paths on macOS).
       # Each runner is already the native arch for its target.
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall -Dversion=${{ github.ref_name }}
+        run: zig build -Doptimize=ReleaseSmall "-Dversion=${{ github.ref_name }}"
 
       - name: Package tarball (Linux)
         if: matrix.pkg == 'tar'
